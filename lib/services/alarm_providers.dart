@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/alarm_model.dart';
+import '../models/challenge_type.dart';
 import 'alarm_service.dart';
 
 /// Provider for the current tab index
@@ -76,6 +77,10 @@ class AlarmsNotifier extends StateNotifier<Future<Map<String, AlarmModel>>> {
     String tag = '',
     String sound = 'default',
     String personality = 'gentle',
+    bool gentleWake = false,
+    int gentleWakeDurationSeconds = 60,
+    ChallengeType? challengeType,
+    String? voiceMemoPath,
   }) async {
     final alarm = AlarmService.createAlarm(
       time: time,
@@ -85,6 +90,10 @@ class AlarmsNotifier extends StateNotifier<Future<Map<String, AlarmModel>>> {
       tag: tag,
       sound: sound,
       personality: personality,
+      gentleWake: gentleWake,
+      gentleWakeDurationSeconds: gentleWakeDurationSeconds,
+      challengeType: challengeType,
+      voiceMemoPath: voiceMemoPath,
     );
     await saveAlarm(alarm);
   }

@@ -4,16 +4,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'screens/alarm_ring_screen.dart';
+import 'screens/bedtime_setup_screen.dart';
 import 'screens/focus_timer_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/insights_screen.dart';
+import 'screens/location_alarm_screen.dart';
+import 'screens/location_picker_screen.dart';
+import 'screens/morning_check_in_screen.dart';
 import 'screens/morning_missions_screen.dart';
+import 'screens/nap_timer_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/sleep_diary_screen.dart';
+import 'screens/sleep_insights_screen.dart';
+import 'screens/sleep_sounds_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/wake_routine_screen.dart';
+import 'screens/wind_down_screen.dart';
 import 'services/alarm_providers.dart';
 import 'services/alarm_service.dart';
 import 'services/alarm_ring_flow.dart';
+import 'services/nap_service.dart';
 import 'services/storage_service.dart';
 
 Future<void> main() async {
@@ -22,6 +32,7 @@ Future<void> main() async {
   await AlarmService.init();
   await AlarmService.restoreEnabledAlarms();
   AlarmRingFlow.bindNativeAlarmEvents();
+  await NapService.checkMissedNap();
   runApp(const AlarmPlusApp());
 }
 
@@ -90,6 +101,15 @@ class AlarmPlusApp extends StatelessWidget {
           MorningMissionsScreen.routeName: (_) => const MorningMissionsScreen(),
           SplashScreen.routeName: (_) => const SplashScreen(),
           WakeRoutineScreen.routeName: (_) => const WakeRoutineScreen(),
+          SleepInsightsScreen.routeName: (_) => const SleepInsightsScreen(),
+          BedtimeSetupScreen.routeName: (_) => const BedtimeSetupScreen(),
+          WindDownScreen.routeName: (_) => const WindDownScreen(),
+          LocationAlarmScreen.routeName: (_) => const LocationAlarmScreen(),
+          LocationPickerScreen.routeName: (_) => const LocationPickerScreen(),
+          SleepSoundsScreen.routeName: (_) => const SleepSoundsScreen(),
+          SleepDiaryScreen.routeName: (_) => const SleepDiaryScreen(),
+          MorningCheckInScreen.routeName: (_) => const MorningCheckInScreen(),
+          NapTimerScreen.routeName: (_) => const NapTimerScreen(),
         },
       ),
     );

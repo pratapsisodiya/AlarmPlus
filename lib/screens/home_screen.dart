@@ -3,14 +3,21 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/alarm_model.dart';
+import '../models/bedtime_schedule.dart';
 import '../services/alarm_providers.dart';
 import '../services/alarm_service.dart';
+import '../services/bedtime_service.dart';
+import '../services/nap_service.dart';
 import '../services/premium_service.dart';
+import '../services/sleep_analytics_service.dart';
 import '../services/smart_alarm_service.dart';
 import '../widgets/alarm_card.dart';
 import 'alarms_screen.dart';
+import 'bedtime_setup_screen.dart';
 import 'focus_timer_screen.dart';
 import 'morning_missions_screen.dart';
+import 'nap_timer_screen.dart';
+import 'sleep_insights_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -338,6 +345,172 @@ class HomeScreen extends ConsumerWidget {
               },
             ),
             const SizedBox(height: 22),
+            // Sleep Insights summary card
+            FutureBuilder<int>(
+              future: SleepAnalyticsService.weeklyScore(),
+              builder: (context, snap) {
+                final score = snap.data ?? 0;
+                final label = SleepAnalyticsService.scoreLabel(score);
+                final color = score >= 80
+                    ? const Color(0xFF22C55E)
+                    : score >= 60
+                        ? const Color(0xFFF59E0B)
+                        : const Color(0xFFEF4444);
+                return GestureDetector(
+                  onTap: () => Navigator.of(context).pushNamed(SleepInsightsScreen.routeName),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.07),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: color.withValues(alpha: 0.25)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Text('😴', style: TextStyle(fontSize: 24)),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Sleep Insights', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                              Text(
+                                snap.hasData
+                                    ? 'Weekly score $score · $label'
+                                    : 'Tap to view your sleep trends',
+                                style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (snap.hasData)
+                          Text(
+                            '$score',
+                            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: color),
+                          ),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.chevron_right_rounded, color: Color(0xFFCBD5E1), size: 20),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+            // Nap Timer card
+            FutureBuilder<bool>(
+              future: NapService.isNapActive(),
+              builder: (context, napSnap) {
+                final napActive = napSnap.data ?? false;
+                return GestureDetector(
+                  onTap: () => Navigator.of(context).pushNamed(NapTimerScreen.routeName),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1e3a5f).withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFF1e3a5f).withValues(alpha: 0.2)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Text('💤', style: TextStyle(fontSize: 24)),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Nap Timer',
+                                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                              Text(
+                                napActive
+                                    ? 'Nap in progress · tap to manage'
+                                    : '20 · 45 · 90 min presets',
+                                style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.chevron_right_rounded,
+                            color: Color(0xFFCBD5E1), size: 20),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+            // Sleep Diary card
+            GestureDetector(
+              onTap: () => Navigator.of(context).pushNamed('/sleep-diary'),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF6366F1).withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFF6366F1).withValues(alpha: 0.2)),
+                ),
+                child: const Row(
+                  children: [
+                    Text('📓', style: TextStyle(fontSize: 24)),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Sleep Diary',
+                              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                          Text('Log last night\'s sleep',
+                              style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.chevron_right_rounded,
+                        color: Color(0xFFCBD5E1), size: 20),
+                  ],
+                ),
+              ),
+            ),
+            // Bedtime / Wind Down card
+            FutureBuilder<BedtimeSchedule?>(
+              future: BedtimeService.load(),
+              builder: (context, snap) {
+                final schedule = snap.data;
+                return GestureDetector(
+                  onTap: () => Navigator.of(context).pushNamed(BedtimeSetupScreen.routeName),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0f172a).withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFF6366F1).withValues(alpha: 0.25)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Text('🌙', style: TextStyle(fontSize: 24)),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Wind Down', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                              Text(
+                                schedule != null && schedule.isEnabled
+                                    ? 'Bedtime ${BedtimeService.nextBedtimeLabel(schedule)} · ${schedule.windDownMinutes}min wind-down'
+                                    : 'Set up your bedtime routine',
+                                style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.chevron_right_rounded, color: Color(0xFFCBD5E1), size: 20),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
             Row(
               children: [
                 Expanded(

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import 'challenge_type.dart';
+
 class AlarmModel {
   AlarmModel({
     required this.id,
@@ -11,6 +13,10 @@ class AlarmModel {
     required this.tag,
     required this.sound,
     this.personality = 'gentle',
+    this.gentleWake = false,
+    this.gentleWakeDurationSeconds = 60,
+    this.challengeType,
+    this.voiceMemoPath,
   });
 
   final String id;
@@ -21,6 +27,10 @@ class AlarmModel {
   final String tag;
   final String sound;
   final String personality;
+  final bool gentleWake;
+  final int gentleWakeDurationSeconds;
+  final ChallengeType? challengeType;
+  final String? voiceMemoPath;
 
   String get timeLabel {
     final now = DateTime.now();
@@ -36,10 +46,9 @@ class AlarmModel {
     if (repeatDays.length == 7) {
       return 'Daily';
     }
-    // Use Set equality for order-independent comparison
     final weekdays = {1, 2, 3, 4, 5};
     final weekends = {6, 7};
-    
+
     if (repeatDays.toSet() == weekdays) {
       return 'Weekdays';
     }
@@ -86,27 +95,35 @@ class AlarmModel {
       'tag': tag,
       'sound': sound,
       'personality': personality,
+      'gentleWake': gentleWake,
+      'gentleWakeDurationSeconds': gentleWakeDurationSeconds,
+      'challengeType': challengeType?.name,
+      'voiceMemoPath': voiceMemoPath,
     };
   }
 
   factory AlarmModel.fromMap(Map<dynamic, dynamic> map) {
-    // Safely parse repeat days with type validation
     final rawDays = (map['repeatDays'] as List<dynamic>? ?? const <dynamic>[])
         .map((item) {
           if (item is int) return item;
           if (item is String) return int.tryParse(item) ?? 0;
           return 0;
         })
-        .where((day) => day > 0) // Filter out invalid values
+        .where((day) => day > 0)
         .toList();
 
-    // Extract and validate core fields
     final id = map['id'] as String?;
     final hour = map['hour'] as int?;
     final minute = map['minute'] as int?;
-    
+
     if (id == null || hour == null || minute == null) {
       throw FormatException('Missing required alarm fields: id=$id, hour=$hour, minute=$minute');
+    }
+
+    final challengeTypeStr = map['challengeType'] as String?;
+    ChallengeType? challengeType;
+    if (challengeTypeStr != null) {
+      challengeType = ChallengeType.values.where((e) => e.name == challengeTypeStr).firstOrNull;
     }
 
     return AlarmModel(
@@ -118,6 +135,10 @@ class AlarmModel {
       tag: (map['tag'] as String?) ?? (map['aiTag'] as String?) ?? 'Steady wake',
       sound: (map['sound'] as String?) ?? 'default',
       personality: (map['personality'] as String?) ?? 'gentle',
+      gentleWake: (map['gentleWake'] as bool?) ?? false,
+      gentleWakeDurationSeconds: (map['gentleWakeDurationSeconds'] as int?) ?? 60,
+      challengeType: challengeType,
+      voiceMemoPath: map['voiceMemoPath'] as String?,
     );
   }
 
@@ -130,6 +151,10 @@ class AlarmModel {
     String? tag,
     String? sound,
     String? personality,
+    bool? gentleWake,
+    int? gentleWakeDurationSeconds,
+    Object? challengeType = _sentinel,
+    Object? voiceMemoPath = _sentinel,
   }) {
     return AlarmModel(
       id: id ?? this.id,
@@ -140,6 +165,12 @@ class AlarmModel {
       tag: tag ?? this.tag,
       sound: sound ?? this.sound,
       personality: personality ?? this.personality,
+      gentleWake: gentleWake ?? this.gentleWake,
+      gentleWakeDurationSeconds: gentleWakeDurationSeconds ?? this.gentleWakeDurationSeconds,
+      challengeType: challengeType == _sentinel ? this.challengeType : challengeType as ChallengeType?,
+      voiceMemoPath: voiceMemoPath == _sentinel ? this.voiceMemoPath : voiceMemoPath as String?,
     );
   }
 }
+
+const Object _sentinel = Object();

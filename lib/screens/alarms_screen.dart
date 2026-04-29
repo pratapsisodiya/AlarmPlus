@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/alarm_personality.dart';
+import '../models/challenge_type.dart';
 import '../services/alarm_providers.dart';
+import '../services/challenge_service.dart';
 import '../services/premium_service.dart';
 import '../services/smart_alarm_service.dart';
 import '../widgets/alarm_card.dart';
+import '../widgets/voice_memo_recorder.dart';
 
 class AlarmsScreen extends ConsumerWidget {
   const AlarmsScreen({super.key});
@@ -86,6 +89,10 @@ class _AddAlarmSheetState extends ConsumerState<_AddAlarmSheet> {
   String _sound = 'default';
   String _personality = 'gentle';
   final Set<int> _repeatDays = {2, 3, 4, 5, 6};
+  bool _gentleWake = false;
+  int _gentleWakeDuration = 60;
+  ChallengeType? _challengeType;
+  String? _voiceMemoPath;
 
   DayTypeProfile _profile = DayTypeProfile.workday;
   double _sleepGoalHours = 7.5;
@@ -358,6 +365,66 @@ class _AddAlarmSheetState extends ConsumerState<_AddAlarmSheet> {
                 ),
               ),
               const SizedBox(height: 24),
+              // Gentle Wake toggle
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Gentle Wake', style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700, fontSize: 18)),
+                        Text('Gradually ramp volume over ${_gentleWakeDuration}s with sunrise colors', style: Theme.of(context).textTheme.bodyMedium),
+                      ],
+                    ),
+                  ),
+                  Switch(
+                    value: _gentleWake,
+                    onChanged: (v) => setState(() => _gentleWake = v),
+                    activeTrackColor: const Color(0xFF22C55E),
+                    activeThumbColor: Colors.white,
+                    inactiveTrackColor: const Color(0xFFE2E8F0),
+                  ),
+                ],
+              ),
+              if (_gentleWake) ...[
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: [30, 60, 120].map((s) {
+                    final selected = _gentleWakeDuration == s;
+                    return ChoiceChip(
+                      label: Text('${s}s'),
+                      selected: selected,
+                      selectedColor: const Color(0xFF22C55E),
+                      labelStyle: TextStyle(color: selected ? Colors.white : const Color(0xFF0F172A), fontWeight: FontWeight.w600),
+                      onSelected: (_) => setState(() => _gentleWakeDuration = s),
+                    );
+                  }).toList(),
+                ),
+              ],
+              const SizedBox(height: 24),
+              // Wake Challenge picker
+              Text('Wake Challenge', style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700, fontSize: 18)),
+              const SizedBox(height: 10),
+              DropdownButtonFormField<ChallengeType?>(
+                initialValue: _challengeType,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                ),
+                items: [
+                  const DropdownMenuItem(value: null, child: Text('Math (default)')),
+                  ...ChallengeType.values.map((t) => DropdownMenuItem(value: t, child: Text(ChallengeService.label(t)))),
+                ],
+                onChanged: (v) => setState(() => _challengeType = v),
+              ),
+              const SizedBox(height: 24),
+              // Voice Memo
+              VoiceMemoRecorder(
+                initialPath: _voiceMemoPath,
+                onMemoSaved: (path) => setState(() => _voiceMemoPath = path),
+              ),
+              const SizedBox(height: 24),
               TextField(
                 controller: _voiceQuickAddController,
                 decoration: InputDecoration(
@@ -626,6 +693,10 @@ class _AddAlarmSheetState extends ConsumerState<_AddAlarmSheet> {
             tag: _tag,
             sound: _sound,
             personality: _personality,
+            gentleWake: _gentleWake,
+            gentleWakeDurationSeconds: _gentleWakeDuration,
+            challengeType: _challengeType,
+            voiceMemoPath: _voiceMemoPath,
           );
 
       if (!mounted) {

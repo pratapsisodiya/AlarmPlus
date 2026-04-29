@@ -12,6 +12,7 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:uuid/uuid.dart';
 
 import '../models/alarm_model.dart';
+import '../models/challenge_type.dart';
 import 'smart_alarm_service.dart';
 import 'storage_service.dart';
 
@@ -247,6 +248,10 @@ class AlarmService {
     required String tag,
     String sound = 'default',
     String personality = 'gentle',
+    bool gentleWake = false,
+    int gentleWakeDurationSeconds = 60,
+    ChallengeType? challengeType,
+    String? voiceMemoPath,
   }) {
     return AlarmModel(
       id: _uuid.v4(),
@@ -257,6 +262,10 @@ class AlarmService {
       tag: tag,
       sound: sound,
       personality: personality,
+      gentleWake: gentleWake,
+      gentleWakeDurationSeconds: gentleWakeDurationSeconds,
+      challengeType: challengeType,
+      voiceMemoPath: voiceMemoPath,
     );
   }
 
@@ -295,6 +304,25 @@ class AlarmService {
       }
     }
     return null;
+  }
+
+  static Future<void> scheduleNapAlarm(DateTime wakeTime) async {
+    final alarm = createAlarm(
+      time: TimeOfDay(hour: wakeTime.hour, minute: wakeTime.minute),
+      label: 'Nap Over! 😴',
+      repeatDays: const [],
+      isEnabled: true,
+      tag: 'nap_timer',
+    );
+    await saveAlarm(alarm);
+    await scheduleAlarm(alarm);
+  }
+
+  static Future<void> cancelNapAlarm() async {
+    final nap = getAllAlarms().where((a) => a.tag == 'nap_timer').firstOrNull;
+    if (nap != null) {
+      await deleteAlarm(nap.id);
+    }
   }
 
   static Future<bool> autoAdjustNextAlarmFromMood({

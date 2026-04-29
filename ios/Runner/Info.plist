@@ -47,5 +47,13 @@
 		<true/>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>Used to record voice memos for your alarms</string>
+		<key>NSLocationWhenInUseUsageDescription</key>
+		<string>Used to trigger alarms when you arrive at a location</string>
+		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+		<string>Used to trigger alarms when you arrive at a location</string>
+		<key>NSCameraUsageDescription</key>
+		<string>Used to scan barcodes for the wake challenge</string>
 	</dict>
 </plist>

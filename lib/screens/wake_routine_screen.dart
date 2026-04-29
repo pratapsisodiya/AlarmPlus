@@ -179,6 +179,16 @@ class _WakeRoutineScreenState extends State<WakeRoutineScreen>
             TextButton(
               onPressed: () {
                 Navigator.pop(ctx);
+                Navigator.of(context).pushNamed('/morning-checkin');
+              },
+              child: const Text(
+                'Sleep Check-In',
+                style: TextStyle(color: Color(0xFF6366F1)),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
                 Navigator.of(context).pop();
               },
               child: const Text(

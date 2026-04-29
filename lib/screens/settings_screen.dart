@@ -5,6 +5,9 @@ import '../services/alarm_providers.dart';
 import '../services/premium_service.dart';
 import '../services/smart_alarm_service.dart';
 import 'alarm_ring_screen.dart';
+import 'bedtime_setup_screen.dart';
+import 'location_alarm_screen.dart';
+import 'sleep_insights_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -171,6 +174,30 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 trailing: const Icon(Icons.insights_outlined),
               );
             },
+          ),
+          _SettingTile(
+            title: 'Sleep Insights',
+            subtitle: 'Weekly score, trends, and sleep debt',
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => Navigator.of(context).pushNamed(SleepInsightsScreen.routeName),
+          ),
+          _SettingTile(
+            title: 'Wind Down / Bedtime',
+            subtitle: 'Set bedtime and wind-down reminders',
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => Navigator.of(context).pushNamed(BedtimeSetupScreen.routeName),
+          ),
+          _SettingTile(
+            title: 'Location Alarms',
+            subtitle: 'Trigger alarms when you arrive somewhere',
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => Navigator.of(context).pushNamed(LocationAlarmScreen.routeName),
+          ),
+          _SettingTile(
+            title: 'Sleep Diary',
+            subtitle: 'Log sleep quality, mood and notes daily',
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => Navigator.of(context).pushNamed('/sleep-diary'),
           ),
         ],
       ),
