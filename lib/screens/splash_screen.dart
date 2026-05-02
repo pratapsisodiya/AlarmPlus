@@ -1,6 +1,6 @@
-import 'dart:math' as math;
-
+import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -12,99 +12,73 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen>
-    with TickerProviderStateMixin {
-  late final AnimationController _mainController;
-  late final AnimationController _shimmerController;
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
 
-  // Circle arc draw
-  late final Animation<double> _circleProgress;
-  // Star orbiting along arc
-  late final Animation<double> _starProgress;
-  // Icon scale pop
-  late final Animation<double> _iconScale;
-  // Icon fade in
   late final Animation<double> _iconOpacity;
-  // Title fade + slide up
-  late final Animation<double> _titleOpacity;
-  late final Animation<double> _titleSlide;
-  // Subtitle fade
-  late final Animation<double> _subtitleOpacity;
-  // Circle scale breath
-  late final Animation<double> _circleScale;
+  late final Animation<double> _iconScale;
+  late final Animation<double> _iconShrink;
+  late final Animation<double> _textContainerOpacity;
+
+  bool _showText = false;
 
   @override
   void initState() {
     super.initState();
 
-    _mainController = AnimationController(
+    _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2800),
+      duration: const Duration(milliseconds: 1800),
     );
 
-    _shimmerController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1600),
-    )..repeat();
-
-    _circleProgress = CurvedAnimation(
-      parent: _mainController,
-      curve: const Interval(0.0, 0.55, curve: Curves.easeOutCubic),
-    );
-
-    _starProgress = CurvedAnimation(
-      parent: _mainController,
-      curve: const Interval(0.02, 0.57, curve: Curves.easeOutCubic),
-    );
-
-    _circleScale = Tween<double>(begin: 0.92, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _mainController,
-        curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
-      ),
-    );
-
-    _iconScale = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _mainController,
-        curve: const Interval(0.30, 0.55, curve: Curves.elasticOut),
-      ),
-    );
-
+    // Phase 1: Icon fades in + scales up (0-800ms => 0.0-0.44)
     _iconOpacity = CurvedAnimation(
-      parent: _mainController,
-      curve: const Interval(0.30, 0.45, curve: Curves.easeIn),
+      parent: _controller,
+      curve: const Interval(0.0, 0.30, curve: Curves.easeIn),
     );
 
-    _titleOpacity = CurvedAnimation(
-      parent: _mainController,
-      curve: const Interval(0.58, 0.75, curve: Curves.easeInOut),
-    );
-
-    _titleSlide = Tween<double>(begin: 18, end: 0).animate(
+    _iconScale = Tween<double>(begin: 0.5, end: 1.0).animate(
       CurvedAnimation(
-        parent: _mainController,
-        curve: const Interval(0.58, 0.78, curve: Curves.easeOutCubic),
+        parent: _controller,
+        curve: const Interval(0.0, 0.44, curve: Curves.easeOutBack),
       ),
     );
 
-    _subtitleOpacity = CurvedAnimation(
-      parent: _mainController,
-      curve: const Interval(0.72, 0.88, curve: Curves.easeIn),
+    // Phase 2: Icon shrinks slightly as text appears (0.44-0.72 => 800-1300ms)
+    _iconShrink = Tween<double>(begin: 1.0, end: 0.85).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.44, 0.72, curve: Curves.easeInOutCubic),
+      ),
     );
 
-    _mainController.forward();
-    _mainController.addStatusListener((status) {
-      if (status == AnimationStatus.completed && mounted) {
-        Navigator.of(context).pushReplacementNamed('/app');
+    // Phase 2: Text container fades in (0.50-0.72 => 900-1300ms)
+    _textContainerOpacity = CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.50, 0.72, curve: Curves.easeIn),
+    );
+
+    _controller.addListener(() {
+      if (_controller.value >= 0.50 && !_showText) {
+        setState(() => _showText = true);
       }
     });
+
+    _controller.forward();
   }
 
   @override
   void dispose() {
-    _mainController.dispose();
-    _shimmerController.dispose();
+    _controller.dispose();
     super.dispose();
+  }
+
+  void _onTextFinished() {
+    Future.delayed(const Duration(milliseconds: 600), () {
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed('/app');
+      }
+    });
   }
 
   @override
@@ -113,160 +87,56 @@ class _SplashScreenState extends State<SplashScreen>
       backgroundColor: Colors.white,
       body: Center(
         child: AnimatedBuilder(
-          animation: Listenable.merge([_mainController, _shimmerController]),
-          builder: (context, child) {
-            return Column(
+          animation: _controller,
+          builder: (context, _) {
+            return Row(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Transform.scale(
-                  scale: _circleScale.value,
-                  child: SizedBox(
-                    width: 260,
-                    height: 260,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        // The arc + star
-                        CustomPaint(
-                          size: const Size.square(260),
-                          painter: _SplashCirclePainter(
-                            progress: _circleProgress.value,
-                            starProgress: _starProgress.value,
-                          ),
-                        ),
-                        // Centered icon image with scale pop
-                        Opacity(
-                          opacity: _iconOpacity.value,
-                          child: Transform.scale(
-                            scale: _iconScale.value,
-                            child: Image.asset(
-                              'assets/icon/icon.png',
-                              width: 90,
-                              height: 90,
-                              fit: BoxFit.contain,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 36),
-                // App name
-                Transform.translate(
-                  offset: Offset(0, _titleSlide.value),
-                  child: Opacity(
-                    opacity: _titleOpacity.value,
-                    child: const Text(
-                      'Alarm+',
-                      style: TextStyle(
-                        fontSize: 34,
-                        letterSpacing: 1.5,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF0F172A),
+                Opacity(
+                  opacity: _iconOpacity.value,
+                  child: Transform.scale(
+                    scale: _iconScale.value * _iconShrink.value,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: Image.asset(
+                        'assets/icon/app_icon.png',
+                        width: 80,
+                        height: 80,
+                        fit: BoxFit.contain,
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 8),
-                // Tagline
-                Opacity(
-                  opacity: _subtitleOpacity.value,
-                  child: const Text(
-                    'Wake up smarter',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF94A3B8),
-                      letterSpacing: 0.5,
+                if (_showText) ...[
+                  const SizedBox(width: 14),
+                  Opacity(
+                    opacity: _textContainerOpacity.value,
+                    child: AnimatedTextKit(
+                      animatedTexts: [
+                        TypewriterAnimatedText(
+                          'Alarm+',
+                          textStyle: GoogleFonts.spaceGrotesk(
+                            fontSize: 34,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF0F172A),
+                            letterSpacing: 1.5,
+                          ),
+                          speed: const Duration(milliseconds: 120),
+                          cursor: '|',
+                        ),
+                      ],
+                      totalRepeatCount: 1,
+                      displayFullTextOnTap: false,
+                      onFinished: _onTextFinished,
                     ),
                   ),
-                ),
+                ],
               ],
             );
           },
         ),
       ),
     );
-  }
-}
-
-class _SplashCirclePainter extends CustomPainter {
-  _SplashCirclePainter({required this.progress, required this.starProgress});
-
-  final double progress;
-  final double starProgress;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = (size.width / 2) - 16;
-
-    final sweepTotal = 2 * math.pi * 0.88;
-    final startAngle = -math.pi / 2 - 0.78;
-    final sweep = sweepTotal * progress;
-
-    // Light subtle track
-    final trackPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5
-      ..color = const Color(0xFFE2E8F0);
-
-    canvas.drawCircle(center, radius, trackPaint);
-
-    // Main arc
-    final arcPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.5
-      ..color = const Color(0xFF0F172A)
-      ..strokeCap = StrokeCap.round;
-
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      startAngle,
-      sweep,
-      false,
-      arcPaint,
-    );
-
-    // Sparkle star at arc tip
-    if (starProgress > 0.01) {
-      final starAngle = startAngle + (sweepTotal * starProgress);
-      final starCenter = Offset(
-        center.dx + radius * math.cos(starAngle),
-        center.dy + radius * math.sin(starAngle),
-      );
-      _drawSparkStar(canvas, starCenter, 14, const Color(0xFF0F172A));
-    }
-  }
-
-  void _drawSparkStar(Canvas canvas, Offset center, double r, Color color) {
-    final path = Path();
-    final points = <Offset>[];
-
-    for (var i = 0; i < 8; i++) {
-      final angle = (-math.pi / 2) + (i * math.pi / 4);
-      final rad = i.isEven ? r : r * 0.38;
-      points.add(
-        Offset(
-          center.dx + rad * math.cos(angle),
-          center.dy + rad * math.sin(angle),
-        ),
-      );
-    }
-
-    path.moveTo(points.first.dx, points.first.dy);
-    for (final point in points.skip(1)) {
-      path.lineTo(point.dx, point.dy);
-    }
-    path.close();
-
-    canvas.drawPath(path, Paint()..color = color);
-  }
-
-  @override
-  bool shouldRepaint(covariant _SplashCirclePainter oldDelegate) {
-    return oldDelegate.progress != progress ||
-        oldDelegate.starProgress != starProgress;
   }
 }

@@ -25,7 +25,7 @@ class AppDurations {
 
 // Animations
 class AppAnimations {
-  static const Duration splashDuration = Duration(milliseconds: 2600);
+  static const Duration splashDuration = Duration(milliseconds: 1800);
   static const Duration fadeInDuration = Duration(milliseconds: 280);
   static const Curve fadeCurve = Curves.easeOut;
 }
