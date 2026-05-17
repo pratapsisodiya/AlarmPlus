@@ -1,0 +1,205 @@
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+
+import 'package:alarm_plus/shared/models/challenge_type.dart';
+
+class AlarmModel {
+  AlarmModel({
+    required this.id,
+    required this.time,
+    required this.label,
+    required this.repeatDays,
+    required this.isEnabled,
+    required this.tag,
+    required this.sound,
+    this.personality = 'gentle',
+    this.gentleWake = false,
+    this.gentleWakeDurationSeconds = 60,
+    this.challengeType,
+    this.voiceMemoPath,
+    this.stepGoal = 20,
+    this.savedQrCode,
+    this.questMode = false,
+    this.questSteps,
+  });
+
+  final String id;
+  final TimeOfDay time;
+  final String label;
+  final List<int> repeatDays;
+  final bool isEnabled;
+  final String tag;
+  final String sound;
+  final String personality;
+  final bool gentleWake;
+  final int gentleWakeDurationSeconds;
+  final ChallengeType? challengeType;
+  final String? voiceMemoPath;
+  final int stepGoal;
+  final String? savedQrCode;
+  final bool questMode;
+  final List<ChallengeType>? questSteps;
+
+  String get timeLabel {
+    final now = DateTime.now();
+    final date = DateTime(now.year, now.month, now.day, time.hour, time.minute);
+    return DateFormat('hh:mm').format(date);
+  }
+
+  String get periodLabel {
+    return time.hour >= 12 ? 'PM' : 'AM';
+  }
+
+  String get repeatLabel {
+    if (repeatDays.length == 7) {
+      return 'Daily';
+    }
+    final weekdays = {1, 2, 3, 4, 5};
+    final weekends = {6, 7};
+
+    if (repeatDays.toSet() == weekdays) {
+      return 'Weekdays';
+    }
+    if (repeatDays.toSet() == weekends) {
+      return 'Weekends';
+    }
+    return 'Custom';
+  }
+
+  DateTime nextDateTimeFrom(DateTime from) {
+    var candidate = DateTime(
+      from.year,
+      from.month,
+      from.day,
+      time.hour,
+      time.minute,
+    );
+
+    if (repeatDays.isEmpty) {
+      if (candidate.isBefore(from)) {
+        candidate = candidate.add(const Duration(days: 1));
+      }
+      return candidate;
+    }
+
+    while (true) {
+      final weekday = candidate.weekday;
+      final validDay = repeatDays.contains(weekday);
+      if (validDay && candidate.isAfter(from)) {
+        return candidate;
+      }
+      candidate = candidate.add(const Duration(days: 1));
+    }
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'hour': time.hour,
+      'minute': time.minute,
+      'label': label,
+      'repeatDays': repeatDays,
+      'isEnabled': isEnabled,
+      'tag': tag,
+      'sound': sound,
+      'personality': personality,
+      'gentleWake': gentleWake,
+      'gentleWakeDurationSeconds': gentleWakeDurationSeconds,
+      'challengeType': challengeType?.name,
+      'voiceMemoPath': voiceMemoPath,
+      'stepGoal': stepGoal,
+      'savedQrCode': savedQrCode,
+      'questMode': questMode,
+      'questSteps': questSteps?.map((e) => e.name).toList(),
+    };
+  }
+
+  factory AlarmModel.fromMap(Map<dynamic, dynamic> map) {
+    final rawDays = (map['repeatDays'] as List<dynamic>? ?? const <dynamic>[])
+        .map((item) {
+          if (item is int) return item;
+          if (item is String) return int.tryParse(item) ?? 0;
+          return 0;
+        })
+        .where((day) => day > 0)
+        .toList();
+
+    final id = map['id'] as String?;
+    final hour = map['hour'] as int?;
+    final minute = map['minute'] as int?;
+
+    if (id == null || hour == null || minute == null) {
+      throw FormatException('Missing required alarm fields: id=$id, hour=$hour, minute=$minute');
+    }
+
+    final challengeTypeStr = map['challengeType'] as String?;
+    ChallengeType? challengeType;
+    if (challengeTypeStr != null) {
+      challengeType = ChallengeType.values.where((e) => e.name == challengeTypeStr).firstOrNull;
+    }
+
+    return AlarmModel(
+      id: id,
+      time: TimeOfDay(hour: hour, minute: minute),
+      label: (map['label'] as String?) ?? '',
+      repeatDays: rawDays,
+      isEnabled: (map['isEnabled'] as bool?) ?? true,
+      tag: (map['tag'] as String?) ?? (map['aiTag'] as String?) ?? 'Steady wake',
+      sound: (map['sound'] as String?) ?? 'default',
+      personality: (map['personality'] as String?) ?? 'gentle',
+      gentleWake: (map['gentleWake'] as bool?) ?? false,
+      gentleWakeDurationSeconds: (map['gentleWakeDurationSeconds'] as int?) ?? 60,
+      challengeType: challengeType,
+      voiceMemoPath: map['voiceMemoPath'] as String?,
+      stepGoal: (map['stepGoal'] as int?) ?? 20,
+      savedQrCode: map['savedQrCode'] as String?,
+      questMode: (map['questMode'] as bool?) ?? false,
+      questSteps: (map['questSteps'] as List<dynamic>?)
+          ?.map((e) => ChallengeType.values
+              .where((v) => v.name == e.toString())
+              .firstOrNull)
+          .whereType<ChallengeType>()
+          .toList(),
+    );
+  }
+
+  AlarmModel copyWith({
+    String? id,
+    TimeOfDay? time,
+    String? label,
+    List<int>? repeatDays,
+    bool? isEnabled,
+    String? tag,
+    String? sound,
+    String? personality,
+    bool? gentleWake,
+    int? gentleWakeDurationSeconds,
+    Object? challengeType = _sentinel,
+    Object? voiceMemoPath = _sentinel,
+    int? stepGoal,
+    Object? savedQrCode = _sentinel,
+    bool? questMode,
+    Object? questSteps = _sentinel,
+  }) {
+    return AlarmModel(
+      id: id ?? this.id,
+      time: time ?? this.time,
+      label: label ?? this.label,
+      repeatDays: repeatDays ?? this.repeatDays,
+      isEnabled: isEnabled ?? this.isEnabled,
+      tag: tag ?? this.tag,
+      sound: sound ?? this.sound,
+      personality: personality ?? this.personality,
+      gentleWake: gentleWake ?? this.gentleWake,
+      gentleWakeDurationSeconds: gentleWakeDurationSeconds ?? this.gentleWakeDurationSeconds,
+      challengeType: challengeType == _sentinel ? this.challengeType : challengeType as ChallengeType?,
+      voiceMemoPath: voiceMemoPath == _sentinel ? this.voiceMemoPath : voiceMemoPath as String?,
+      stepGoal: stepGoal ?? this.stepGoal,
+      savedQrCode: savedQrCode == _sentinel ? this.savedQrCode : savedQrCode as String?,
+      questMode: questMode ?? this.questMode,
+      questSteps: questSteps == _sentinel ? this.questSteps : questSteps as List<ChallengeType>?,
+    );
+  }
+}
+
+const Object _sentinel = Object();

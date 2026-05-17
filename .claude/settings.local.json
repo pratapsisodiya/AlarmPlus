@@ -6,7 +6,12 @@
       "Bash(wmic logicaldisk *)",
       "Bash(powershell *)",
       "Bash(echo \"Part 1 written: $?\")",
-      "Bash(grep -v \"^$\")"
+      "Bash(grep -v \"^$\")",
+      "Bash(flutter pub *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(xargs grep -l \"tensorflow\\\\|tflite\\\\|model\\\\|inference\\\\|llm\\\\|ai\\\\|ml\\\\|gpt\\\\|claude\\\\|neural\")"
     ]
   }
 }

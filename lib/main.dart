@@ -3,30 +3,32 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'screens/alarm_ring_screen.dart';
-import 'screens/bedtime_setup_screen.dart';
-import 'screens/focus_timer_screen.dart';
-import 'screens/home_screen.dart';
-import 'screens/insights_screen.dart';
-import 'screens/location_alarm_screen.dart';
-import 'screens/location_picker_screen.dart';
-import 'screens/morning_check_in_screen.dart';
-import 'screens/morning_missions_screen.dart';
-import 'screens/nap_timer_screen.dart';
-import 'screens/settings_screen.dart';
-import 'screens/sleep_diary_screen.dart';
-import 'screens/sound_settings_screen.dart';
-import 'screens/sleep_insights_screen.dart';
-import 'screens/sleep_sounds_screen.dart';
-import 'screens/splash_screen.dart';
-import 'screens/wake_routine_screen.dart';
-import 'screens/wind_down_screen.dart';
-import 'services/alarm_providers.dart';
-import 'services/alarm_service.dart';
-import 'services/alarm_ring_flow.dart';
-import 'services/location_alarm_service.dart';
-import 'services/nap_service.dart';
-import 'services/storage_service.dart';
+import 'package:alarm_plus/features/alarm/screens/alarm_ring_screen.dart';
+import 'package:alarm_plus/features/alarm/screens/quest_builder_screen.dart';
+import 'package:alarm_plus/features/alarm/screens/qr_spot_setup_screen.dart';
+import 'package:alarm_plus/features/alarm/services/alarm_providers.dart';
+import 'package:alarm_plus/features/alarm/services/alarm_ring_flow.dart';
+import 'package:alarm_plus/features/alarm/services/alarm_service.dart';
+import 'package:alarm_plus/features/focus/screens/focus_timer_screen.dart';
+import 'package:alarm_plus/features/focus/screens/nap_timer_screen.dart';
+import 'package:alarm_plus/features/focus/services/nap_service.dart';
+import 'package:alarm_plus/features/home/screens/home_screen.dart';
+import 'package:alarm_plus/features/home/screens/insights_screen.dart';
+import 'package:alarm_plus/features/home/screens/splash_screen.dart';
+import 'package:alarm_plus/features/location/screens/location_alarm_screen.dart';
+import 'package:alarm_plus/features/location/screens/location_picker_screen.dart';
+import 'package:alarm_plus/features/location/services/location_alarm_service.dart';
+import 'package:alarm_plus/features/missions/screens/morning_missions_screen.dart';
+import 'package:alarm_plus/features/settings/screens/settings_screen.dart';
+import 'package:alarm_plus/features/settings/screens/sound_settings_screen.dart';
+import 'package:alarm_plus/features/sleep/screens/bedtime_setup_screen.dart';
+import 'package:alarm_plus/features/sleep/screens/morning_check_in_screen.dart';
+import 'package:alarm_plus/features/sleep/screens/sleep_diary_screen.dart';
+import 'package:alarm_plus/features/sleep/screens/sleep_insights_screen.dart';
+import 'package:alarm_plus/features/sleep/screens/sleep_sounds_screen.dart';
+import 'package:alarm_plus/features/sleep/screens/wake_routine_screen.dart';
+import 'package:alarm_plus/features/sleep/screens/wind_down_screen.dart';
+import 'package:alarm_plus/core/services/storage_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -114,6 +116,8 @@ class AlarmPlusApp extends StatelessWidget {
           MorningCheckInScreen.routeName: (_) => const MorningCheckInScreen(),
           NapTimerScreen.routeName: (_) => const NapTimerScreen(),
           SoundSettingsScreen.routeName: (_) => const SoundSettingsScreen(),
+          QrSpotSetupScreen.routeName: (_) => const QrSpotSetupScreen(),
+          QuestBuilderScreen.routeName: (_) => const QuestBuilderScreen(),
         },
       ),
     );
