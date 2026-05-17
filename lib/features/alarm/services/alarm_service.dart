@@ -268,6 +268,9 @@ class AlarmService {
     String? savedQrCode,
     bool questMode = false,
     List<ChallengeType>? questSteps,
+    bool wakeUpCheckEnabled = false,
+    int wakeUpCheckMinutes = 10,
+    bool hardcoreMode = false,
   }) {
     return AlarmModel(
       id: _uuid.v4(),
@@ -286,6 +289,9 @@ class AlarmService {
       savedQrCode: savedQrCode,
       questMode: questMode,
       questSteps: questSteps,
+      wakeUpCheckEnabled: wakeUpCheckEnabled,
+      wakeUpCheckMinutes: wakeUpCheckMinutes,
+      hardcoreMode: hardcoreMode,
     );
   }
 

@@ -85,6 +85,9 @@ class AlarmsNotifier extends StateNotifier<Future<Map<String, AlarmModel>>> {
     String? savedQrCode,
     bool questMode = false,
     List<ChallengeType>? questSteps,
+    bool wakeUpCheckEnabled = false,
+    int wakeUpCheckMinutes = 10,
+    bool hardcoreMode = false,
   }) async {
     final alarm = AlarmService.createAlarm(
       time: time,
@@ -102,6 +105,9 @@ class AlarmsNotifier extends StateNotifier<Future<Map<String, AlarmModel>>> {
       savedQrCode: savedQrCode,
       questMode: questMode,
       questSteps: questSteps,
+      wakeUpCheckEnabled: wakeUpCheckEnabled,
+      wakeUpCheckMinutes: wakeUpCheckMinutes,
+      hardcoreMode: hardcoreMode,
     );
     await saveAlarm(alarm);
   }

@@ -11,6 +11,7 @@ import 'package:alarm_plus/features/sleep/screens/bedtime_setup_screen.dart';
 import 'package:alarm_plus/features/location/screens/location_alarm_screen.dart';
 import 'package:alarm_plus/features/sleep/screens/sleep_insights_screen.dart';
 import 'package:alarm_plus/features/settings/screens/sound_settings_screen.dart';
+import 'package:alarm_plus/core/services/guardian_service.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -26,6 +27,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   late Future<int> _windDownFuture;
   late Future<AlarmStats> _statsFuture;
   late Future<PackageInfo> _packageInfoFuture;
+  late Future<String> _guardianWebhookFuture;
 
   static const _privacyPolicyUrl =
       'https://sites.google.com/view/alarmplus-privacy/home';
@@ -43,6 +45,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _windDownFuture = SmartAlarmService.getWindDownMinutes();
     _statsFuture = SmartAlarmService.getStats();
     _packageInfoFuture = PackageInfo.fromPlatform();
+    _guardianWebhookFuture = GuardianService.getWebhookUrl();
   }
 
   void _refreshAndRebuild() {
@@ -171,6 +174,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 subtitle: '$minutes min before sleep + checklist',
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () => _showWindDownPicker(context, minutes),
+              );
+            },
+          ),
+          FutureBuilder<String>(
+            future: _guardianWebhookFuture,
+            builder: (context, snapshot) {
+              final url = snapshot.data ?? '';
+              return _SettingTile(
+                title: 'Guardian Alert',
+                subtitle: url.isEmpty
+                    ? 'Webhook fires after 10 min of ignored alarm'
+                    : 'Webhook: ${url.length > 36 ? '${url.substring(0, 36)}…' : url}',
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => _showGuardianDialog(context, url),
               );
             },
           ),
@@ -399,6 +416,53 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 _refreshAndRebuild();
               },
             ),
+        ],
+      ),
+    );
+  }
+
+  void _showGuardianDialog(BuildContext context, String currentUrl) {
+    final controller = TextEditingController(text: currentUrl);
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Guardian Alert Webhook'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'If your alarm rings for 10+ minutes without being dismissed, '
+              'Alarm+ will POST a JSON alert to this URL.\n\n'
+              'Works with IFTTT, Discord, Zapier, Telegram bots, etc.',
+              style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                labelText: 'Webhook URL',
+                hintText: 'https://hooks.ifttt.com/…',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.url,
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              await GuardianService.setWebhookUrl(controller.text.trim());
+              if (ctx.mounted) Navigator.pop(ctx);
+              _refreshAndRebuild();
+            },
+            child: const Text('Save'),
+          ),
         ],
       ),
     );

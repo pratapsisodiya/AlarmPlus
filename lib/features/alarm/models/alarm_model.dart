@@ -21,6 +21,9 @@ class AlarmModel {
     this.savedQrCode,
     this.questMode = false,
     this.questSteps,
+    this.wakeUpCheckEnabled = false,
+    this.wakeUpCheckMinutes = 10,
+    this.hardcoreMode = false,
   });
 
   final String id;
@@ -39,6 +42,9 @@ class AlarmModel {
   final String? savedQrCode;
   final bool questMode;
   final List<ChallengeType>? questSteps;
+  final bool wakeUpCheckEnabled;
+  final int wakeUpCheckMinutes;
+  final bool hardcoreMode;
 
   String get timeLabel {
     final now = DateTime.now();
@@ -111,6 +117,9 @@ class AlarmModel {
       'savedQrCode': savedQrCode,
       'questMode': questMode,
       'questSteps': questSteps?.map((e) => e.name).toList(),
+      'wakeUpCheckEnabled': wakeUpCheckEnabled,
+      'wakeUpCheckMinutes': wakeUpCheckMinutes,
+      'hardcoreMode': hardcoreMode,
     };
   }
 
@@ -160,6 +169,9 @@ class AlarmModel {
               .firstOrNull)
           .whereType<ChallengeType>()
           .toList(),
+      wakeUpCheckEnabled: (map['wakeUpCheckEnabled'] as bool?) ?? false,
+      wakeUpCheckMinutes: (map['wakeUpCheckMinutes'] as int?) ?? 10,
+      hardcoreMode: (map['hardcoreMode'] as bool?) ?? false,
     );
   }
 
@@ -180,6 +192,9 @@ class AlarmModel {
     Object? savedQrCode = _sentinel,
     bool? questMode,
     Object? questSteps = _sentinel,
+    bool? wakeUpCheckEnabled,
+    int? wakeUpCheckMinutes,
+    bool? hardcoreMode,
   }) {
     return AlarmModel(
       id: id ?? this.id,
@@ -198,6 +213,9 @@ class AlarmModel {
       savedQrCode: savedQrCode == _sentinel ? this.savedQrCode : savedQrCode as String?,
       questMode: questMode ?? this.questMode,
       questSteps: questSteps == _sentinel ? this.questSteps : questSteps as List<ChallengeType>?,
+      wakeUpCheckEnabled: wakeUpCheckEnabled ?? this.wakeUpCheckEnabled,
+      wakeUpCheckMinutes: wakeUpCheckMinutes ?? this.wakeUpCheckMinutes,
+      hardcoreMode: hardcoreMode ?? this.hardcoreMode,
     );
   }
 }

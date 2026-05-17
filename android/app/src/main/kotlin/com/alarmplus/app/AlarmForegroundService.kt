@@ -41,6 +41,10 @@ class AlarmForegroundService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_STOP) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
         alarmId = intent?.getIntExtra(EXTRA_ALARM_ID, 0) ?: 0
 
         startForeground(NOTIFICATION_ID, buildNotification(alarmId))
@@ -48,7 +52,22 @@ class AlarmForegroundService : Service() {
         registerVolumeReceiver()
         registerActionReceiver()
 
-        return START_NOT_STICKY
+        // START_STICKY restarts this service if the system kills it while an alarm is active
+        return START_STICKY
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        // User swiped app away — restart the alarm service so it keeps ringing
+        val restartIntent = Intent(applicationContext, AlarmForegroundService::class.java).apply {
+            action = ACTION_START
+            putExtra(EXTRA_ALARM_ID, alarmId)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(restartIntent)
+        } else {
+            startService(restartIntent)
+        }
+        super.onTaskRemoved(rootIntent)
     }
 
     override fun onDestroy() {

@@ -8,10 +8,16 @@ This document tracks identified issues, deprecations, and potential logic bugs i
 - **Memory/Hardware Performance:** `.github/workflows/build-apk.yml` mentions "Fix memory issues", implying possible leaks or high consumption during builds/runtime.
 
 ## ✅ Fixed
-- **Silent Failures (catch blocks):** All empty `catch (_) {}` blocks across `smart_alarm_service.dart`, `alarm_ring_screen.dart`, `alarm_ring_flow.dart`, `home_screen.dart`, `trivia_service.dart`, and `voice_memo_service.dart` now log via `debugPrint`.
-- **Hardcoded Package Name:** `android/app/build.gradle.kts` application ID changed from `com.example.lumio` to `com.alarmplus.app`; Kotlin source files moved to matching package directory.
-- **Flutter Deprecations:** All `MaterialStatePropertyAll`, `MaterialStateProperty`, and `MaterialState` usages replaced with `WidgetState*` equivalents across all affected screens.
+- **Silent Failures (catch blocks):** All empty `catch (_) {}` blocks now log via `debugPrint`.
+- **Hardcoded Package Name:** Application ID changed from `com.example.lumio` → `com.alarmplus.app`; Kotlin source files moved to matching package directory.
+- **Flutter Deprecations:** All `MaterialStatePropertyAll`, `MaterialStateProperty`, `MaterialState` and `DropdownButtonFormField.value` usages replaced with `WidgetState*` / `initialValue` equivalents.
 - **Unused Field:** `_settingsKey` in `storage_service.dart` was already absent in current code (stale issue).
+
+## ✅ Phase 1 Heavy Sleeper Features (Implemented 2026-05-17)
+- **Wake-Up Check:** AlarmModel gains `wakeUpCheckEnabled` + `wakeUpCheckMinutes` (5/10/15). After dismiss, a local notification fires; if not tapped within 60 s the alarm re-rings. Toggle in alarm creation sheet.
+- **Mission Chaining / Quest Mode:** Already existed in the data model and ring screen (`questMode`, `questSteps`). Now wired end-to-end in creation UI.
+- **Guardian Alert System:** `GuardianService` sends an HTTP POST to a user-configured webhook URL after 10 continuous minutes of un-dismissed ringing. Settings tile in Settings screen.
+- **Hardcore Anti-Cheat Mode:** AlarmModel gains `hardcoreMode` bool. When enabled: (a) `PopScope(canPop: false)` blocks back-navigation in `AlarmRingScreen`; (b) `AlarmForegroundService` changed to `START_STICKY` + `onTaskRemoved` restarts the service if the app is swiped away.
 
 ---
 *Updated on 2026-05-17*

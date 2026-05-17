@@ -99,6 +99,9 @@ class _AddAlarmSheetState extends ConsumerState<_AddAlarmSheet> {
   List<ChallengeType> _questSteps = [];
   String? _savedQrCode;
   int _stepGoal = 20;
+  bool _wakeUpCheck = false;
+  int _wakeUpCheckMinutes = 10;
+  bool _hardcoreMode = false;
 
   DayTypeProfile _profile = DayTypeProfile.workday;
   double _sleepGoalHours = 7.5;
@@ -415,7 +418,7 @@ class _AddAlarmSheetState extends ConsumerState<_AddAlarmSheet> {
               Text('Wake Challenge', style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700, fontSize: 18)),
               const SizedBox(height: 10),
               DropdownButtonFormField<ChallengeType?>(
-                value: _challengeType,
+                initialValue: _challengeType,
                 decoration: InputDecoration(
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -588,6 +591,86 @@ class _AddAlarmSheetState extends ConsumerState<_AddAlarmSheet> {
                   ),
                 ),
               ),
+              // ── Heavy Sleeper section ─────────────────────────────────────
+              const SizedBox(height: 28),
+              Text(
+                'Heavy Sleeper',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 18,
+                ),
+              ),
+              const SizedBox(height: 12),
+              // Wake-Up Check toggle
+              Row(children: [
+                const Icon(Icons.alarm_on_rounded, color: Color(0xFFF59E0B), size: 20),
+                const SizedBox(width: 10),
+                Expanded(child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Wake-Up Check',
+                        style: Theme.of(context).textTheme.bodyLarge
+                            ?.copyWith(fontWeight: FontWeight.w700)),
+                    const Text('Re-rings if you don\'t confirm you\'re awake',
+                        style: TextStyle(fontSize: 13, color: Color(0xFF94A3B8))),
+                  ],
+                )),
+                Switch(
+                  value: _wakeUpCheck,
+                  onChanged: (v) => setState(() => _wakeUpCheck = v),
+                  thumbColor: const WidgetStatePropertyAll(Colors.white),
+                  trackColor: WidgetStateProperty.resolveWith<Color?>(
+                    (s) => s.contains(WidgetState.selected)
+                        ? const Color(0xFFF59E0B)
+                        : const Color(0xFFE2E8F0),
+                  ),
+                ),
+              ]),
+              if (_wakeUpCheck) ...[
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: [5, 10, 15].map((min) {
+                    final sel = _wakeUpCheckMinutes == min;
+                    return ChoiceChip(
+                      label: Text('$min min'),
+                      selected: sel,
+                      selectedColor: const Color(0xFFF59E0B),
+                      labelStyle: TextStyle(
+                        color: sel ? Colors.white : const Color(0xFF0F172A),
+                        fontWeight: FontWeight.w600,
+                      ),
+                      onSelected: (_) => setState(() => _wakeUpCheckMinutes = min),
+                    );
+                  }).toList(),
+                ),
+              ],
+              const SizedBox(height: 12),
+              // Hardcore Mode toggle
+              Row(children: [
+                const Icon(Icons.lock_rounded, color: Color(0xFF7C3AED), size: 20),
+                const SizedBox(width: 10),
+                Expanded(child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Hardcore Mode',
+                        style: Theme.of(context).textTheme.bodyLarge
+                            ?.copyWith(fontWeight: FontWeight.w700)),
+                    const Text('Disables back button while alarm is ringing',
+                        style: TextStyle(fontSize: 13, color: Color(0xFF94A3B8))),
+                  ],
+                )),
+                Switch(
+                  value: _hardcoreMode,
+                  onChanged: (v) => setState(() => _hardcoreMode = v),
+                  thumbColor: const WidgetStatePropertyAll(Colors.white),
+                  trackColor: WidgetStateProperty.resolveWith<Color?>(
+                    (s) => s.contains(WidgetState.selected)
+                        ? const Color(0xFF7C3AED)
+                        : const Color(0xFFE2E8F0),
+                  ),
+                ),
+              ]),
               const SizedBox(height: 20),
               Row(
                 children: [
@@ -852,6 +935,9 @@ class _AddAlarmSheetState extends ConsumerState<_AddAlarmSheet> {
             savedQrCode: _savedQrCode,
             questMode: _questMode,
             questSteps: _questMode ? _questSteps : null,
+            wakeUpCheckEnabled: _wakeUpCheck,
+            wakeUpCheckMinutes: _wakeUpCheckMinutes,
+            hardcoreMode: _hardcoreMode,
           );
 
       if (!mounted) {

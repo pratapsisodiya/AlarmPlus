@@ -3,12 +3,15 @@ import 'dart:async';
 import 'package:alarm/alarm.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:vibration/vibration.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
+import 'package:alarm_plus/features/alarm/models/alarm_model.dart';
 import 'package:alarm_plus/features/alarm/screens/alarm_ring_screen.dart';
 import 'package:alarm_plus/features/alarm/services/alarm_service.dart';
 import 'package:alarm_plus/core/services/smart_alarm_service.dart';
+import 'package:alarm_plus/core/services/guardian_service.dart';
 
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -26,6 +29,15 @@ class AlarmRingFlow {
   static final Map<int, int> _snoozeSessionCount = <int, int>{};
 
   static const _channel = MethodChannel('alarmplus/alarm_controls');
+
+  static final FlutterLocalNotificationsPlugin _notifications =
+      FlutterLocalNotificationsPlugin();
+
+  // Tracks ring start time for Guardian Alert threshold
+  static final Map<int, DateTime> _ringStartTimes = <int, DateTime>{};
+  static final Map<int, Timer> _guardianTimers = <int, Timer>{};
+  // Tracks pending wake-up check timers
+  static final Map<int, Timer> _wakeUpCheckTimers = <int, Timer>{};
 
   static void bindNativeAlarmEvents() {
     _channel.setMethodCallHandler((call) async {
@@ -65,10 +77,20 @@ class AlarmRingFlow {
 
   static Future<void> onAlarmRing(int alarmId) async {
     _currentRingingId = alarmId;
+    _ringStartTimes[alarmId] = DateTime.now();
     await WakelockPlus.enable();
 
     // Start foreground service for lock-screen takeover + volume-snooze
     await _startForegroundService(alarmId);
+
+    // Guardian alert: fire webhook after 10 minutes of ignored alarm
+    _guardianTimers[alarmId]?.cancel();
+    _guardianTimers[alarmId] = Timer(const Duration(minutes: 10), () async {
+      final still = await Alarm.isRinging(alarmId).catchError((_) => false);
+      if (still) {
+        await GuardianService.triggerAlert(alarmId);
+      }
+    });
 
     try {
       final hasVibrator = await Vibration.hasVibrator();
@@ -136,6 +158,10 @@ class AlarmRingFlow {
     _snoozedIds.add(alarmId);
     _snoozeSessionCount[alarmId] = (_snoozeSessionCount[alarmId] ?? 0) + 1;
 
+    _guardianTimers[alarmId]?.cancel();
+    _guardianTimers.remove(alarmId);
+    _ringStartTimes.remove(alarmId);
+
     await _stopEffects();
 
     appNavigatorKey.currentState?.pop();
@@ -165,11 +191,70 @@ class AlarmRingFlow {
 
     _missedRecoveryTimers[alarmId]?.cancel();
     _missedRecoveryTimers.remove(alarmId);
+    _guardianTimers[alarmId]?.cancel();
+    _guardianTimers.remove(alarmId);
+    _ringStartTimes.remove(alarmId);
 
     // Stop audio/vibration immediately so sound doesn't play during celebration modal
     await _stopEffects();
 
+    // Schedule wake-up check if enabled on this alarm
+    if (alarm.wakeUpCheckEnabled) {
+      _scheduleWakeUpCheck(alarm, alarmId);
+    }
+
     return reward;
+  }
+
+  static void _scheduleWakeUpCheck(AlarmModel alarm, int alarmId) {
+    _wakeUpCheckTimers[alarmId]?.cancel();
+    final delay = Duration(minutes: alarm.wakeUpCheckMinutes);
+    _wakeUpCheckTimers[alarmId] = Timer(delay, () async {
+      _wakeUpCheckTimers.remove(alarmId);
+      await _fireWakeUpCheckNotification(alarmId, alarm);
+    });
+  }
+
+  static Future<void> _fireWakeUpCheckNotification(int alarmId, AlarmModel alarm) async {
+    const androidDetails = AndroidNotificationDetails(
+      'alarm_plus_wakecheck',
+      'Wake-Up Check',
+      channelDescription: 'Verify you are still awake after dismissing an alarm',
+      importance: Importance.max,
+      priority: Priority.max,
+      category: AndroidNotificationCategory.alarm,
+      fullScreenIntent: true,
+      autoCancel: false,
+      ongoing: true,
+    );
+    const details = NotificationDetails(android: androidDetails, iOS: DarwinNotificationDetails());
+    final checkId = alarmId + 2000000;
+    await _notifications.show(
+      checkId,
+      'Are you awake? 👁️',
+      'Tap to confirm you\'re up — ${alarm.label.isEmpty ? "Alarm+" : alarm.label}',
+      details,
+      payload: 'wakecheck:$alarmId',
+    );
+
+    // If not tapped within 60 s, re-ring the alarm
+    Timer(const Duration(seconds: 60), () async {
+      await _notifications.cancel(checkId);
+      await AlarmService.scheduleAlarm(
+        alarm.copyWith(
+          time: TimeOfDay.fromDateTime(DateTime.now().add(const Duration(seconds: 5))),
+          isEnabled: true,
+        ),
+        persist: false,
+      );
+      debugPrint('Wake-up check failed for ${alarm.id} — re-ringing alarm');
+    });
+  }
+
+  static void cancelWakeUpCheck(int alarmId) {
+    _wakeUpCheckTimers[alarmId]?.cancel();
+    _wakeUpCheckTimers.remove(alarmId);
+    _notifications.cancel(alarmId + 2000000);
   }
 
   /// Call this after the ring screen celebration modal is dismissed to pop the screen.
@@ -194,6 +279,9 @@ class AlarmRingFlow {
     _snoozeSessionCount.remove(alarmId);
     _missedRecoveryTimers[alarmId]?.cancel();
     _missedRecoveryTimers.remove(alarmId);
+    _guardianTimers[alarmId]?.cancel();
+    _guardianTimers.remove(alarmId);
+    _ringStartTimes.remove(alarmId);
     await SmartAlarmService.recordDismissed(hadSnooze: false, snoozeCount: 0);
     await _stopEffects();
     appNavigatorKey.currentState?.pop();

@@ -532,6 +532,7 @@ class _AlarmRingScreenState extends State<AlarmRingScreen>
   Widget build(BuildContext context) {
     final alarmId = _alarmId;
     final alarm = AlarmService.findByIntId(alarmId);
+    final isHardcore = alarm?.hardcoreMode ?? false;
     final screenWidth = MediaQuery.of(context).size.width;
     final dismissThreshold = screenWidth * 0.40;
     final isDismissDir = _dragDx > 0;
@@ -602,6 +603,15 @@ class _AlarmRingScreenState extends State<AlarmRingScreen>
                 padding: const EdgeInsets.fromLTRB(22, 24, 22, 30),
                 child: Column(
                   children: [
+                    if (isHardcore)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        margin: const EdgeInsets.only(bottom: 6),
+                        decoration: BoxDecoration(color: const Color(0xFF7C3AED), borderRadius: BorderRadius.circular(12)),
+                        child: const Text('🔒 HARDCORE MODE — Back button disabled', textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, letterSpacing: 1, fontSize: 11)),
+                      ).animate().fadeIn(duration: 400.ms),
                     if (_isBossMode)
                       Container(
                         width: double.infinity,
@@ -737,6 +747,13 @@ class _AlarmRingScreenState extends State<AlarmRingScreen>
       body = ColoredBox(color: bgColor, child: body);
     }
 
+    // Hardcore Mode: wrap with PopScope to block back navigation
+    if (isHardcore) {
+      return PopScope(
+        canPop: false,
+        child: Scaffold(body: body),
+      );
+    }
     return Scaffold(body: body);
   }
 }
