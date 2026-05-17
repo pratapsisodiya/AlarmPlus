@@ -418,7 +418,7 @@ class _AddAlarmSheetState extends ConsumerState<_AddAlarmSheet> {
               Text('Wake Challenge', style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700, fontSize: 18)),
               const SizedBox(height: 10),
               DropdownButtonFormField<ChallengeType?>(
-                initialValue: _challengeType,
+                value: _challengeType,
                 decoration: InputDecoration(
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
