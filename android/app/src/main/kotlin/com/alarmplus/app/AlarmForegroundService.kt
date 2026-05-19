@@ -9,6 +9,9 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.media.Ringtone
+import android.media.RingtoneManager
+import android.net.Uri
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
@@ -34,6 +37,7 @@ class AlarmForegroundService : Service() {
     private var volumeReceiver: BroadcastReceiver? = null
     private var actionReceiver: BroadcastReceiver? = null
     private var alarmId: Int = 0
+    private var ringtone: Ringtone? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -49,6 +53,7 @@ class AlarmForegroundService : Service() {
 
         startForeground(NOTIFICATION_ID, buildNotification(alarmId))
         acquireWakeLock()
+        playNativeRingtoneIfSet(alarmId)
         registerVolumeReceiver()
         registerActionReceiver()
 
@@ -71,6 +76,7 @@ class AlarmForegroundService : Service() {
     }
 
     override fun onDestroy() {
+        stopNativeRingtone()
         releaseWakeLock()
         unregisterVolumeReceiverSafe()
         unregisterActionReceiverSafe()
@@ -79,6 +85,26 @@ class AlarmForegroundService : Service() {
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
+
+    // ── Native ringtone ──────────────────────────────────────────────────────
+
+    private fun playNativeRingtoneIfSet(id: Int) {
+        // Flutter's shared_preferences prefixes keys with "flutter."
+        val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
+        val uriString = prefs.getString("flutter.alarm.native_ringtone.$id", null)
+        if (uriString.isNullOrEmpty()) return
+        try {
+            val uri = Uri.parse(uriString)
+            ringtone = RingtoneManager.getRingtone(applicationContext, uri)
+            ringtone?.isLooping = true
+            ringtone?.play()
+        } catch (_: Exception) {}
+    }
+
+    private fun stopNativeRingtone() {
+        try { ringtone?.stop() } catch (_: Exception) {}
+        ringtone = null
+    }
 
     // ── Notification ────────────────────────────────────────────────────────
 

@@ -113,13 +113,13 @@ flutter_launcher_icons:
 
 flutter_native_splash:
   color: "#FFFFFF"
-  image: assets/icon/icon-splash.png
+  image: assets/icon/app_icon.png
   android: true
   ios: true
   web: true
   android_12:
     color: "#FFFFFF"
-    image: assets/icon/icon-splash.png
+    image: assets/icon/app_icon.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:

@@ -1,3 +1,5 @@
+import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,7 +9,7 @@ import 'package:alarm_plus/features/alarm/services/alarm_providers.dart';
 import 'package:alarm_plus/features/alarm/services/challenge_service.dart';
 import 'package:alarm_plus/features/alarm/screens/quest_builder_screen.dart';
 import 'package:alarm_plus/features/alarm/screens/qr_spot_setup_screen.dart';
-import 'package:alarm_plus/core/services/premium_service.dart';
+import 'package:alarm_plus/core/services/ringtone_service.dart';
 import 'package:alarm_plus/core/services/smart_alarm_service.dart';
 import 'package:alarm_plus/shared/widgets/alarm_card.dart';
 import 'package:alarm_plus/features/sleep/widgets/voice_memo_recorder.dart';
@@ -89,6 +91,7 @@ class _AddAlarmSheetState extends ConsumerState<_AddAlarmSheet> {
   bool _setAlarm = true;
   String _tag = 'Steady wake';
   String _sound = 'default';
+  String _soundTitle = 'Default Alarm';
   String _personality = 'gentle';
   final Set<int> _repeatDays = {2, 3, 4, 5, 6};
   bool _gentleWake = false;
@@ -119,6 +122,24 @@ class _AddAlarmSheetState extends ConsumerState<_AddAlarmSheet> {
     super.dispose();
   }
 
+  Future<void> _openSoundPicker() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _SoundPickerSheet(
+        currentSound: _sound,
+        currentTitle: _soundTitle,
+        onSelected: (sound, title) {
+          setState(() {
+            _sound = sound;
+            _soundTitle = title;
+          });
+        },
+      ),
+    );
+  }
+
   Future<void> _loadTeenSleepProfile() async {
     final profile = await SmartAlarmService.getTeenSleepProfile();
     if (!mounted) {
@@ -147,10 +168,10 @@ class _AddAlarmSheetState extends ConsumerState<_AddAlarmSheet> {
             children: [
               Center(
                 child: Container(
-                  width: 86,
-                  height: 8,
+                  width: 48,
+                  height: 5,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFD4D7DD),
+                    color: const Color(0xFFCCCCCC),
                     borderRadius: BorderRadius.circular(999),
                   ),
                 ),
@@ -263,7 +284,7 @@ class _AddAlarmSheetState extends ConsumerState<_AddAlarmSheet> {
                   final selected = _repeatDays.contains(weekday);
                   return Padding(
                     padding: const EdgeInsets.only(right: 8),
-                    child: InkWell(
+                    child: GestureDetector(
                       onTap: () {
                         setState(() {
                           if (selected) {
@@ -273,24 +294,32 @@ class _AddAlarmSheetState extends ConsumerState<_AddAlarmSheet> {
                           }
                         });
                       },
-                      child: Container(
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        curve: Curves.easeInOut,
                         width: 46,
                         height: 46,
                         decoration: BoxDecoration(
-                          color: selected ? Colors.black : Colors.white,
+                          color: selected
+                              ? const Color(0xFF111111)
+                              : Colors.white,
                           borderRadius: BorderRadius.circular(23),
-                          border: Border.all(color: const Color(0xFFD4D7DD)),
+                          border: Border.all(
+                            color: selected
+                                ? const Color(0xFF111111)
+                                : const Color(0xFFD4D7DD),
+                          ),
                         ),
                         child: Center(
                           child: Text(
                             labels[index],
-                            style: Theme.of(context).textTheme.bodyLarge
-                                ?.copyWith(
-                                  color: selected
-                                      ? Colors.white
-                                      : const Color(0xFF94A3B8),
-                                  fontSize: 18,
-                                ),
+                            style: TextStyle(
+                              color: selected
+                                  ? Colors.white
+                                  : const Color(0xFF888888),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ),
@@ -300,7 +329,7 @@ class _AddAlarmSheetState extends ConsumerState<_AddAlarmSheet> {
               ),
               const SizedBox(height: 24),
               InkWell(
-                onTap: _cycleSound,
+                onTap: _openSoundPicker,
                 borderRadius: BorderRadius.circular(12),
                 child: Row(
                   children: [
@@ -382,37 +411,41 @@ class _AddAlarmSheetState extends ConsumerState<_AddAlarmSheet> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('Gentle Wake', style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700, fontSize: 18)),
-                        Text('Gradually ramp volume over ${_gentleWakeDuration}s with sunrise colors', style: Theme.of(context).textTheme.bodyMedium),
+                        Text('Gradually ramp volume over ${_gentleWakeDuration}s', style: Theme.of(context).textTheme.bodyMedium),
                       ],
                     ),
                   ),
-                  Switch(
+                  _AnimatedToggle(
                     value: _gentleWake,
                     onChanged: (v) => setState(() => _gentleWake = v),
-                    thumbColor: WidgetStatePropertyAll(Colors.white),
-                    trackColor: WidgetStateProperty.resolveWith<Color?>((states) =>
-                        states.contains(WidgetState.selected)
-                            ? const Color(0xFF22C55E)
-                            : const Color(0xFFE2E8F0)),
                   ),
                 ],
               ),
-              if (_gentleWake) ...[
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  children: [30, 60, 120].map((s) {
-                    final selected = _gentleWakeDuration == s;
-                    return ChoiceChip(
-                      label: Text('${s}s'),
-                      selected: selected,
-                      selectedColor: const Color(0xFF22C55E),
-                      labelStyle: TextStyle(color: selected ? Colors.white : const Color(0xFF0F172A), fontWeight: FontWeight.w600),
-                      onSelected: (_) => setState(() => _gentleWakeDuration = s),
-                    );
-                  }).toList(),
-                ),
-              ],
+              AnimatedSize(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeInOut,
+                child: _gentleWake
+                    ? Padding(
+                        padding: const EdgeInsets.only(top: 10),
+                        child: Wrap(
+                          spacing: 8,
+                          children: [30, 60, 120].map((s) {
+                            final selected = _gentleWakeDuration == s;
+                            return ChoiceChip(
+                              label: Text('${s}s'),
+                              selected: selected,
+                              selectedColor: const Color(0xFF111111),
+                              labelStyle: TextStyle(
+                                  color: selected ? Colors.white : const Color(0xFF111111),
+                                  fontWeight: FontWeight.w600),
+                              onSelected: (_) =>
+                                  setState(() => _gentleWakeDuration = s),
+                            );
+                          }).toList(),
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+              ),
               const SizedBox(height: 24),
               // Wake Challenge picker
               Text('Wake Challenge', style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700, fontSize: 18)),
@@ -434,7 +467,7 @@ class _AddAlarmSheetState extends ConsumerState<_AddAlarmSheet> {
               // ── Quest Mode toggle ──────────────────────────────────────
               Row(children: [
                 const Icon(Icons.rocket_launch_rounded,
-                    color: Color(0xFF6366F1), size: 20),
+                    color: Color(0xFF444444), size: 20),
                 const SizedBox(width: 10),
                 Expanded(child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -443,10 +476,10 @@ class _AddAlarmSheetState extends ConsumerState<_AddAlarmSheet> {
                         style: Theme.of(context).textTheme.bodyLarge
                             ?.copyWith(fontWeight: FontWeight.w700)),
                     const Text('Chain multiple challenges in order',
-                        style: TextStyle(fontSize: 13, color: Color(0xFF94A3B8))),
+                        style: TextStyle(fontSize: 13, color: Color(0xFF888888))),
                   ],
                 )),
-                Switch(
+                _AnimatedToggle(
                   value: _questMode,
                   onChanged: (v) => setState(() {
                     _questMode = v;
@@ -457,42 +490,43 @@ class _AddAlarmSheetState extends ConsumerState<_AddAlarmSheet> {
                       ];
                     }
                   }),
-                  thumbColor: const WidgetStatePropertyAll(Colors.white),
-                  trackColor: WidgetStateProperty.resolveWith<Color?>(
-                    (s) => s.contains(WidgetState.selected)
-                        ? const Color(0xFF6366F1)
-                        : const Color(0xFFE2E8F0),
-                  ),
                 ),
               ]),
-              if (_questMode) ...[
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: () async {
-                    final result = await Navigator.of(context).push<List<ChallengeType>>(
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            QuestBuilderScreen(initialSteps: _questSteps),
-                      ),
-                    );
-                    if (result != null && mounted) {
-                      setState(() => _questSteps = result);
-                    }
-                  },
-                  icon: const Icon(Icons.edit_rounded, size: 16),
-                  label: Text(_questSteps.isEmpty
-                      ? 'Build Quest'
-                      : _questSteps
-                          .map((t) => ChallengeService.label(t))
-                          .join(' → ')),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF6366F1),
-                    side: const BorderSide(color: Color(0xFF6366F1)),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-              ],
+              AnimatedSize(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeInOut,
+                child: _questMode
+                    ? Padding(
+                        padding: const EdgeInsets.only(top: 10),
+                        child: OutlinedButton.icon(
+                          onPressed: () async {
+                            final result =
+                                await Navigator.of(context).push<List<ChallengeType>>(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    QuestBuilderScreen(initialSteps: _questSteps),
+                              ),
+                            );
+                            if (result != null && mounted) {
+                              setState(() => _questSteps = result);
+                            }
+                          },
+                          icon: const Icon(Icons.edit_rounded, size: 16),
+                          label: Text(_questSteps.isEmpty
+                              ? 'Build Quest'
+                              : _questSteps
+                                  .map((t) => ChallengeService.label(t))
+                                  .join(' → ')),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF111111),
+                            side: const BorderSide(color: Color(0xFF444444)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+              ),
 
               // ── QR Spot (shown when barcodeScan is selected or in quest) ──
               if (_challengeType == ChallengeType.barcodeScan ||
@@ -603,7 +637,7 @@ class _AddAlarmSheetState extends ConsumerState<_AddAlarmSheet> {
               const SizedBox(height: 12),
               // Wake-Up Check toggle
               Row(children: [
-                const Icon(Icons.alarm_on_rounded, color: Color(0xFFF59E0B), size: 20),
+                const Icon(Icons.alarm_on_rounded, color: Color(0xFF444444), size: 20),
                 const SizedBox(width: 10),
                 Expanded(child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -612,43 +646,44 @@ class _AddAlarmSheetState extends ConsumerState<_AddAlarmSheet> {
                         style: Theme.of(context).textTheme.bodyLarge
                             ?.copyWith(fontWeight: FontWeight.w700)),
                     const Text('Re-rings if you don\'t confirm you\'re awake',
-                        style: TextStyle(fontSize: 13, color: Color(0xFF94A3B8))),
+                        style: TextStyle(fontSize: 13, color: Color(0xFF888888))),
                   ],
                 )),
-                Switch(
+                _AnimatedToggle(
                   value: _wakeUpCheck,
                   onChanged: (v) => setState(() => _wakeUpCheck = v),
-                  thumbColor: const WidgetStatePropertyAll(Colors.white),
-                  trackColor: WidgetStateProperty.resolveWith<Color?>(
-                    (s) => s.contains(WidgetState.selected)
-                        ? const Color(0xFFF59E0B)
-                        : const Color(0xFFE2E8F0),
-                  ),
                 ),
               ]),
-              if (_wakeUpCheck) ...[
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  children: [5, 10, 15].map((min) {
-                    final sel = _wakeUpCheckMinutes == min;
-                    return ChoiceChip(
-                      label: Text('$min min'),
-                      selected: sel,
-                      selectedColor: const Color(0xFFF59E0B),
-                      labelStyle: TextStyle(
-                        color: sel ? Colors.white : const Color(0xFF0F172A),
-                        fontWeight: FontWeight.w600,
-                      ),
-                      onSelected: (_) => setState(() => _wakeUpCheckMinutes = min),
-                    );
-                  }).toList(),
-                ),
-              ],
+              AnimatedSize(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeInOut,
+                child: _wakeUpCheck
+                    ? Padding(
+                        padding: const EdgeInsets.only(top: 10),
+                        child: Wrap(
+                          spacing: 8,
+                          children: [5, 10, 15].map((min) {
+                            final sel = _wakeUpCheckMinutes == min;
+                            return ChoiceChip(
+                              label: Text('$min min'),
+                              selected: sel,
+                              selectedColor: const Color(0xFF111111),
+                              labelStyle: TextStyle(
+                                color: sel ? Colors.white : const Color(0xFF111111),
+                                fontWeight: FontWeight.w600,
+                              ),
+                              onSelected: (_) =>
+                                  setState(() => _wakeUpCheckMinutes = min),
+                            );
+                          }).toList(),
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+              ),
               const SizedBox(height: 12),
               // Hardcore Mode toggle
               Row(children: [
-                const Icon(Icons.lock_rounded, color: Color(0xFF7C3AED), size: 20),
+                const Icon(Icons.lock_rounded, color: Color(0xFF444444), size: 20),
                 const SizedBox(width: 10),
                 Expanded(child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -657,39 +692,28 @@ class _AddAlarmSheetState extends ConsumerState<_AddAlarmSheet> {
                         style: Theme.of(context).textTheme.bodyLarge
                             ?.copyWith(fontWeight: FontWeight.w700)),
                     const Text('Disables back button while alarm is ringing',
-                        style: TextStyle(fontSize: 13, color: Color(0xFF94A3B8))),
+                        style: TextStyle(fontSize: 13, color: Color(0xFF888888))),
                   ],
                 )),
-                Switch(
+                _AnimatedToggle(
                   value: _hardcoreMode,
                   onChanged: (v) => setState(() => _hardcoreMode = v),
-                  thumbColor: const WidgetStatePropertyAll(Colors.white),
-                  trackColor: WidgetStateProperty.resolveWith<Color?>(
-                    (s) => s.contains(WidgetState.selected)
-                        ? const Color(0xFF7C3AED)
-                        : const Color(0xFFE2E8F0),
-                  ),
                 ),
               ]),
               const SizedBox(height: 20),
               Row(
                 children: [
                   Text(
-                    'Set Alarm',
+                    'Enable Alarm',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w500,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                   const Spacer(),
-                  Switch(
+                  _AnimatedToggle(
                     value: _setAlarm,
                     onChanged: (value) => setState(() => _setAlarm = value),
-                    thumbColor: WidgetStatePropertyAll(Colors.white),
-                    trackColor: WidgetStateProperty.resolveWith<Color?>((states) =>
-                        states.contains(WidgetState.selected)
-                            ? const Color(0xFF22C55E)
-                            : const Color(0xFFE2E8F0)),
                   ),
                 ],
               ),
@@ -756,30 +780,7 @@ class _AddAlarmSheetState extends ConsumerState<_AddAlarmSheet> {
     return '${_formatHour(bedtime.hour)}:${bedtime.minute.toString().padLeft(2, '0')} ${bedtime.hour >= 12 ? 'PM' : 'AM'}';
   }
 
-  String _soundLabel() {
-    switch (_sound) {
-      case 'rotate':
-        return 'Rotate Daily';
-      case 'default':
-      default:
-        return 'Default Ringtone';
-    }
-  }
-
-  void _cycleSound() {
-    if (_sound == 'default') {
-      _requirePremium(PremiumFeature.rotatingAlarmSounds).then((allowed) {
-        if (!allowed || !mounted) {
-          return;
-        }
-
-        setState(() => _sound = 'rotate');
-      });
-      return;
-    }
-
-    setState(() => _sound = 'default');
-  }
+  String _soundLabel() => _soundTitle;
 
   void _applyVoiceQuickAdd() {
     final parsed = SmartAlarmService.parseQuickAdd(
@@ -959,15 +960,326 @@ class _AddAlarmSheetState extends ConsumerState<_AddAlarmSheet> {
     }
   }
 
-  Future<bool> _requirePremium(PremiumFeature feature) async {
-    if (await PremiumService.canUse(feature)) {
-      return true;
-    }
+}
 
-    if (!mounted) {
-      return false;
-    }
+// ── Sound Picker ─────────────────────────────────────────────────────────────
 
-    return PremiumService.showLifetimePaywall(context, feature);
+class _SoundPickerSheet extends StatefulWidget {
+  const _SoundPickerSheet({
+    required this.currentSound,
+    required this.currentTitle,
+    required this.onSelected,
+  });
+  final String currentSound;
+  final String currentTitle;
+  final void Function(String sound, String title) onSelected;
+
+  @override
+  State<_SoundPickerSheet> createState() => _SoundPickerSheetState();
+}
+
+class _SoundPickerSheetState extends State<_SoundPickerSheet> {
+  final _player = AudioPlayer();
+  String? _previewingKey;
+  bool _pickingNative = false;
+  late String _selected;
+  late String _selectedTitle;
+
+  static const _bundled = <String, String>{
+    'assets/sounds/rain.mp3': 'Rain',
+    'assets/sounds/ocean.mp3': 'Ocean',
+    'assets/sounds/forest.mp3': 'Forest',
+    'assets/sounds/white_noise.mp3': 'White Noise',
+    'assets/sounds/brown_noise.mp3': 'Brown Noise',
+    'assets/sounds/crickets.mp3': 'Crickets',
+    'assets/sounds/fan.mp3': 'Fan',
+    'assets/sounds/thunder.mp3': 'Thunder',
+  };
+
+  bool get _isAndroid =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = widget.currentSound;
+    _selectedTitle = widget.currentTitle;
+  }
+
+  @override
+  void dispose() {
+    _player.dispose();
+    super.dispose();
+  }
+
+  Future<void> _select(String key, String title) async {
+    await _player.stop();
+    setState(() {
+      _selected = key;
+      _selectedTitle = title;
+      _previewingKey = null;
+    });
+    widget.onSelected(key, title);
+  }
+
+  Future<void> _togglePreview(String assetKey) async {
+    await _player.stop();
+    if (_previewingKey == assetKey) {
+      setState(() => _previewingKey = null);
+      return;
+    }
+    setState(() => _previewingKey = assetKey);
+    await _player.play(AssetSource(assetKey.replaceFirst('assets/', '')));
+    _player.onPlayerComplete.listen((_) {
+      if (mounted) setState(() => _previewingKey = null);
+    });
+  }
+
+  Future<void> _pickNative() async {
+    if (_pickingNative) return;
+    setState(() => _pickingNative = true);
+    final currentUri =
+        RingtoneService.isNativeUri(_selected) ? _selected : null;
+    final uri = await RingtoneService.pickRingtone(currentUri: currentUri);
+    if (!mounted) return;
+    setState(() => _pickingNative = false);
+    if (uri != null) {
+      final title = await RingtoneService.getTitleForUri(uri);
+      if (mounted) await _select(uri, title);
+    }
+  }
+
+  IconData _iconFor(String key) {
+    if (key.contains('rain')) return Icons.water_drop_rounded;
+    if (key.contains('ocean')) return Icons.waves_rounded;
+    if (key.contains('forest')) return Icons.forest_rounded;
+    if (key.contains('white') || key.contains('brown')) return Icons.blur_on_rounded;
+    if (key.contains('fan')) return Icons.air_rounded;
+    if (key.contains('thunder')) return Icons.bolt_rounded;
+    if (key.contains('crickets')) return Icons.grass_rounded;
+    return Icons.music_note_rounded;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      padding: EdgeInsets.fromLTRB(
+          24, 16, 24, MediaQuery.of(context).padding.bottom + 32),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 48,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFCCCCCC),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text('Choose Sound',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 16),
+
+            // Default system tone
+            _SoundRow(
+              icon: Icons.alarm_rounded,
+              label: 'Default Alarm',
+              subtitle: 'System alarm tone',
+              isSelected: _selected == 'default',
+              onTap: () => _select('default', 'Default Alarm'),
+            ),
+
+            // Android-only native ringtone picker
+            if (_isAndroid) ...[
+              const SizedBox(height: 4),
+              _SoundRow(
+                icon: Icons.library_music_rounded,
+                label: 'Phone Ringtones',
+                subtitle: RingtoneService.isNativeUri(_selected)
+                    ? _selectedTitle
+                    : 'Pick from device alarm tones',
+                isSelected: RingtoneService.isNativeUri(_selected),
+                trailing: _pickingNative
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.chevron_right_rounded,
+                        color: Color(0xFFAAAAAA), size: 20),
+                onTap: _pickNative,
+              ),
+            ],
+
+            const SizedBox(height: 16),
+            const Text('AMBIENT SOUNDS',
+                style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 2.0,
+                    color: Color(0xFF888888))),
+            const SizedBox(height: 10),
+
+            // Bundled sounds with preview
+            ..._bundled.entries.map((e) {
+              final isSelected = _selected == e.key;
+              final isPreviewing = _previewingKey == e.key;
+              return _SoundRow(
+                icon: _iconFor(e.key),
+                label: e.value,
+                isSelected: isSelected,
+                trailing: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => _togglePreview(e.key),
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: isPreviewing
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Color(0xFF111111)),
+                          )
+                        : Icon(
+                            Icons.play_circle_outline_rounded,
+                            color: isSelected
+                                ? const Color(0xFF111111)
+                                : const Color(0xFFAAAAAA),
+                            size: 24,
+                          ),
+                  ),
+                ),
+                onTap: () => _select(e.key, e.value),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SoundRow extends StatelessWidget {
+  const _SoundRow({
+    required this.icon,
+    required this.label,
+    this.subtitle,
+    required this.isSelected,
+    this.trailing,
+    required this.onTap,
+  });
+  final IconData icon;
+  final String label;
+  final String? subtitle;
+  final bool isSelected;
+  final Widget? trailing;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        margin: const EdgeInsets.only(bottom: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFF0F0F0) : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color:
+                isSelected ? const Color(0xFF111111) : const Color(0xFFE8E8E8),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(icon,
+                size: 20,
+                color: isSelected
+                    ? const Color(0xFF111111)
+                    : const Color(0xFF888888)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label,
+                      style: TextStyle(
+                          fontWeight: isSelected
+                              ? FontWeight.w700
+                              : FontWeight.w500,
+                          fontSize: 15,
+                          color: const Color(0xFF111111))),
+                  if (subtitle != null)
+                    Text(subtitle!,
+                        style: const TextStyle(
+                            fontSize: 12, color: Color(0xFF888888))),
+                ],
+              ),
+            ),
+            if (trailing != null)
+              trailing!
+            else if (isSelected)
+              const Icon(Icons.check_rounded,
+                  color: Color(0xFF111111), size: 18),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Animated Toggle ───────────────────────────────────────────────────────────
+
+class _AnimatedToggle extends StatelessWidget {
+  const _AnimatedToggle({required this.value, required this.onChanged});
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => onChanged(!value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+        width: 52,
+        height: 28,
+        decoration: BoxDecoration(
+          color: value ? const Color(0xFF111111) : const Color(0xFFE0E0E0),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: AnimatedAlign(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          alignment: value ? Alignment.centerRight : Alignment.centerLeft,
+          child: Container(
+            width: 22,
+            height: 22,
+            margin: const EdgeInsets.symmetric(horizontal: 3),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.15),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

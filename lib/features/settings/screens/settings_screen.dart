@@ -21,7 +21,6 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  late Future<bool> _premiumFuture;
   late Future<AlarmReliabilityStatus> _reliabilityFuture;
   late Future<DismissChallengeType> _dismissChallengeFuture;
   late Future<int> _windDownFuture;
@@ -39,7 +38,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   void _refreshAsyncTiles() {
-    _premiumFuture = PremiumService.isLifetimePremiumUnlocked();
     _reliabilityFuture = SmartAlarmService.getReliabilityStatus();
     _dismissChallengeFuture = SmartAlarmService.getDismissChallenge();
     _windDownFuture = SmartAlarmService.getWindDownMinutes();
@@ -55,112 +53,46 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final vibrationEnabled = ref.watch(vibrationEnabledProvider);
-    final themeDark = ref.watch(themeDarkProvider);
 
     return SafeArea(
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(22, 14, 22, 30),
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 30),
         children: [
-          Text('SETTINGS', style: Theme.of(context).textTheme.headlineMedium),
-          const SizedBox(height: 16),
-          FutureBuilder<bool>(
-            future: _premiumFuture,
-            builder: (context, snapshot) {
-              final unlocked = snapshot.data ?? false;
-              return _SettingTile(
-                title: 'Lifetime Premium',
-                subtitle: unlocked
-                    ? 'Unlocked · Sleep coach pro, adaptive alarms, wake challenges'
-                    : '₹299 one-time · unlock pro planning and teen sleep features',
-                trailing: Icon(
-                  unlocked
-                      ? Icons.workspace_premium_rounded
-                      : Icons.lock_outline_rounded,
-                ),
-                onTap: () => _showPremiumDialog(context, unlocked),
-              );
-            },
-          ),
-          Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            child: Text(
-              'Premium bundle: ${PremiumService.bundleLabels().join(' · ')}',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
-            ),
-          ),
+          Text('Settings',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                fontSize: 24,
+              )),
+          const SizedBox(height: 20),
+
+          // ── ALARM section ──────────────────────────────────────
+          _SectionHeader(label: 'ALARM'),
           _SettingTile(
             title: 'Sound',
             subtitle: 'Wake tone and ring volume',
-            trailing: const Icon(Icons.chevron_right_rounded),
-            onTap: () => Navigator.of(context).pushNamed(SoundSettingsScreen.routeName),
+            trailing: const Icon(Icons.chevron_right_rounded,
+                color: Color(0xFFAAAAAA), size: 20),
+            onTap: () => Navigator.of(context)
+                .pushNamed(SoundSettingsScreen.routeName),
           ),
           _SettingTile(
             title: 'Vibration',
-            subtitle: 'Use vibration on alarm ring',
-            trailing: Switch(
+            trailing: _AnimatedToggle(
               value: vibrationEnabled,
-              onChanged: (value) =>
-                  ref.read(vibrationEnabledProvider.notifier).state = value,
-              thumbColor: WidgetStatePropertyAll(Colors.white),
-              trackColor: WidgetStateProperty.resolveWith<Color?>((states) =>
-                  states.contains(WidgetState.selected)
-                      ? const Color(0xFF22C55E)
-                      : const Color(0xFFE2E8F0)),
+              onChanged: (v) =>
+                  ref.read(vibrationEnabledProvider.notifier).state = v,
             ),
-          ),
-          _SettingTile(
-            title: 'Theme Toggle',
-            subtitle: 'Prepared for future dark mode',
-            trailing: Switch(
-              value: themeDark,
-              onChanged: (value) =>
-                  ref.read(themeDarkProvider.notifier).state = value,
-              thumbColor: WidgetStatePropertyAll(Colors.white),
-              trackColor: WidgetStateProperty.resolveWith<Color?>((states) =>
-                  states.contains(WidgetState.selected)
-                      ? const Color(0xFF22C55E)
-                      : const Color(0xFFE2E8F0)),
-            ),
-          ),
-          const SizedBox(height: 12),
-          _SettingTile(
-            title: 'Preview Alarm Ring Screen',
-            subtitle: 'Stop / Snooze full-screen preview',
-            trailing: const Icon(Icons.chevron_right_rounded),
-            onTap: () =>
-                Navigator.of(context).pushNamed(AlarmRingScreen.routeName),
-          ),
-          FutureBuilder<AlarmReliabilityStatus>(
-            future: _reliabilityFuture,
-            builder: (context, snapshot) {
-              final status = snapshot.data;
-              final subtitle = status == null
-                  ? 'Checking notification and exact alarm health'
-                  : 'Notif: ${status.notificationsGranted ? 'ON' : 'OFF'} · Exact: ${status.exactAlarmGranted ? 'ON' : 'OFF'}';
-              return _SettingTile(
-                title: 'Alarm Reliability Dashboard',
-                subtitle: subtitle,
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => _showReliabilityDialog(context, status),
-              );
-            },
           ),
           FutureBuilder<DismissChallengeType>(
             future: _dismissChallengeFuture,
             builder: (context, snapshot) {
-              final challenge = snapshot.data ?? DismissChallengeType.none;
+              final challenge =
+                  snapshot.data ?? DismissChallengeType.none;
               return _SettingTile(
-                title: 'Dismiss Challenge',
-                subtitle: 'Current: ${challenge.name.toUpperCase()}',
-                trailing: const Icon(Icons.chevron_right_rounded),
+                title: 'Wake Challenge',
+                subtitle: challenge.name.toUpperCase(),
+                trailing: const Icon(Icons.chevron_right_rounded,
+                    color: Color(0xFFAAAAAA), size: 20),
                 onTap: () => _showChallengePicker(context, challenge),
               );
             },
@@ -171,69 +103,108 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               final minutes = snapshot.data ?? 30;
               return _SettingTile(
                 title: 'Pre-Alarm Wind-Down',
-                subtitle: '$minutes min before sleep + checklist',
-                trailing: const Icon(Icons.chevron_right_rounded),
+                subtitle: '$minutes min before sleep',
+                trailing: const Icon(Icons.chevron_right_rounded,
+                    color: Color(0xFFAAAAAA), size: 20),
                 onTap: () => _showWindDownPicker(context, minutes),
               );
             },
           ),
+          FutureBuilder<AlarmReliabilityStatus>(
+            future: _reliabilityFuture,
+            builder: (context, snapshot) {
+              final status = snapshot.data;
+              final ok = status?.notificationsGranted == true &&
+                  status?.exactAlarmGranted == true;
+              return _SettingTile(
+                title: 'Alarm Reliability',
+                subtitle: status == null
+                    ? 'Checking…'
+                    : ok
+                        ? 'All permissions granted'
+                        : 'Action needed',
+                trailing: Icon(
+                  ok ? Icons.check_circle_outline_rounded : Icons.warning_amber_rounded,
+                  color: ok ? const Color(0xFF111111) : const Color(0xFF888888),
+                  size: 20,
+                ),
+                onTap: () => _showReliabilityDialog(context, status),
+              );
+            },
+          ),
+          _SettingTile(
+            title: 'Preview Alarm Screen',
+            trailing: const Icon(Icons.chevron_right_rounded,
+                color: Color(0xFFAAAAAA), size: 20),
+            onTap: () =>
+                Navigator.of(context).pushNamed(AlarmRingScreen.routeName),
+          ),
+          const SizedBox(height: 8),
+
+          // ── FEATURES section ───────────────────────────────────
+          _SectionHeader(label: 'FEATURES'),
           FutureBuilder<String>(
             future: _guardianWebhookFuture,
             builder: (context, snapshot) {
               final url = snapshot.data ?? '';
               return _SettingTile(
                 title: 'Guardian Alert',
-                subtitle: url.isEmpty
-                    ? 'Webhook fires after 10 min of ignored alarm'
-                    : 'Webhook: ${url.length > 36 ? '${url.substring(0, 36)}…' : url}',
-                trailing: const Icon(Icons.chevron_right_rounded),
+                subtitle: url.isEmpty ? 'Not configured' : 'Webhook active',
+                trailing: const Icon(Icons.chevron_right_rounded,
+                    color: Color(0xFFAAAAAA), size: 20),
                 onTap: () => _showGuardianDialog(context, url),
               );
             },
+          ),
+          _SettingTile(
+            title: 'Location Alarms',
+            subtitle: 'Trigger on arrival',
+            trailing: const Icon(Icons.chevron_right_rounded,
+                color: Color(0xFFAAAAAA), size: 20),
+            onTap: () =>
+                Navigator.of(context).pushNamed(LocationAlarmScreen.routeName),
           ),
           FutureBuilder<AlarmStats>(
             future: _statsFuture,
             builder: (context, snapshot) {
               final stats = snapshot.data;
               return _SettingTile(
-                title: 'Streaks & Wake Metrics',
+                title: 'Streaks & Metrics',
                 subtitle: stats == null
-                    ? 'Loading streaks...'
-                    : 'Streak ${stats.currentStreak}, best ${stats.bestStreak}, snooze ${stats.snoozeCount}',
-                trailing: const Icon(Icons.insights_outlined),
+                    ? '…'
+                    : 'Streak ${stats.currentStreak} · best ${stats.bestStreak}',
+                trailing: const Icon(Icons.insights_outlined,
+                    color: Color(0xFFAAAAAA), size: 20),
               );
             },
           ),
           _SettingTile(
             title: 'Sleep Insights',
-            subtitle: 'Weekly score, trends, and sleep debt',
-            trailing: const Icon(Icons.chevron_right_rounded),
-            onTap: () => Navigator.of(context).pushNamed(SleepInsightsScreen.routeName),
+            subtitle: 'Weekly score and trends',
+            trailing: const Icon(Icons.chevron_right_rounded,
+                color: Color(0xFFAAAAAA), size: 20),
+            onTap: () =>
+                Navigator.of(context).pushNamed(SleepInsightsScreen.routeName),
           ),
           _SettingTile(
             title: 'Wind Down / Bedtime',
-            subtitle: 'Set bedtime and wind-down reminders',
-            trailing: const Icon(Icons.chevron_right_rounded),
-            onTap: () => Navigator.of(context).pushNamed(BedtimeSetupScreen.routeName),
-          ),
-          _SettingTile(
-            title: 'Location Alarms',
-            subtitle: 'Trigger alarms when you arrive somewhere',
-            trailing: const Icon(Icons.chevron_right_rounded),
-            onTap: () => Navigator.of(context).pushNamed(LocationAlarmScreen.routeName),
+            subtitle: 'Bedtime and wind-down reminders',
+            trailing: const Icon(Icons.chevron_right_rounded,
+                color: Color(0xFFAAAAAA), size: 20),
+            onTap: () =>
+                Navigator.of(context).pushNamed(BedtimeSetupScreen.routeName),
           ),
           _SettingTile(
             title: 'Sleep Diary',
-            subtitle: 'Log sleep quality, mood and notes daily',
-            trailing: const Icon(Icons.chevron_right_rounded),
+            subtitle: 'Log sleep quality daily',
+            trailing: const Icon(Icons.chevron_right_rounded,
+                color: Color(0xFFAAAAAA), size: 20),
             onTap: () => Navigator.of(context).pushNamed('/sleep-diary'),
           ),
-          _SettingTile(
-            title: 'Privacy Policy',
-            subtitle: 'How we handle your data',
-            trailing: const Icon(Icons.open_in_new_rounded),
-            onTap: () => _openPrivacyPolicy(context),
-          ),
+          const SizedBox(height: 8),
+
+          // ── APP section ────────────────────────────────────────
+          _SectionHeader(label: 'APP'),
           FutureBuilder<PackageInfo>(
             future: _packageInfoFuture,
             builder: (context, snapshot) {
@@ -243,11 +214,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   : 'v${info.version} (${info.buildNumber})';
               return _SettingTile(
                 title: 'About Alarm+',
-                subtitle: 'Smart alarm for better mornings · $version',
-                trailing: const Icon(Icons.info_outline_rounded),
+                subtitle: version,
+                trailing: const Icon(Icons.info_outline_rounded,
+                    color: Color(0xFFAAAAAA), size: 20),
                 onTap: () => _showAboutDialog(context, info),
               );
             },
+          ),
+          _SettingTile(
+            title: 'Privacy Policy',
+            trailing: const Icon(Icons.open_in_new_rounded,
+                color: Color(0xFFAAAAAA), size: 20),
+            onTap: () => _openPrivacyPolicy(context),
           ),
         ],
       ),
@@ -277,7 +255,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         const SizedBox(height: 8),
         const Text(
           'Smart alarm with wake-up challenges, sleep coaching, '
-          'gamification and morning routines — built for teens and young adults.',
+          'gamification and morning routines.',
         ),
         const SizedBox(height: 12),
         TextButton(
@@ -291,33 +269,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Future<void> _showPremiumDialog(BuildContext context, bool unlocked) async {
-    if (unlocked) {
-      await showDialog<void>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Lifetime Premium'),
-          content: const Text(
-            'Lifetime premium is already unlocked on this device.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Close'),
-            ),
-          ],
-        ),
-      );
-      return;
-    }
-
-    final purchased = await PremiumService.showLifetimePaywall(
-      context,
-      PremiumFeature.sleepCoachPro,
-    );
-    if (purchased) _refreshAndRebuild();
-  }
-
   void _showReliabilityDialog(
     BuildContext context,
     AlarmReliabilityStatus? status,
@@ -325,13 +276,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Alarm Reliability Dashboard'),
+        title: const Text('Alarm Reliability'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Scheduled alarms are managed with native exact mode.'),
-            const SizedBox(height: 8),
             Text(
               'Notifications: ${status?.notificationsGranted == true ? 'Granted' : 'Missing'}',
             ),
@@ -378,16 +327,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       context,
                       PremiumFeature.smartDismissModes,
                     );
-                    if (context.mounted) {
-                      Navigator.pop(context);
-                    }
+                    if (context.mounted) Navigator.pop(context);
                     return;
                   }
-
                   await SmartAlarmService.setDismissChallenge(type);
-                  if (context.mounted) {
-                    Navigator.pop(context);
-                  }
+                  if (context.mounted) Navigator.pop(context);
                   _refreshAndRebuild();
                 },
               );
@@ -410,9 +354,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               trailing: current == minutes ? const Icon(Icons.check) : null,
               onTap: () async {
                 await SmartAlarmService.setWindDownMinutes(minutes);
-                if (context.mounted) {
-                  Navigator.pop(context);
-                }
+                if (context.mounted) Navigator.pop(context);
                 _refreshAndRebuild();
               },
             ),
@@ -433,9 +375,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           children: [
             const Text(
               'If your alarm rings for 10+ minutes without being dismissed, '
-              'Alarm+ will POST a JSON alert to this URL.\n\n'
-              'Works with IFTTT, Discord, Zapier, Telegram bots, etc.',
-              style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+              'Alarm+ will POST a JSON alert to this URL.',
+              style: TextStyle(fontSize: 13, color: Color(0xFF666666)),
             ),
             const SizedBox(height: 16),
             TextField(
@@ -469,16 +410,81 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 }
 
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 2.0,
+          color: Color(0xFF888888),
+        ),
+      ),
+    );
+  }
+}
+
+class _AnimatedToggle extends StatelessWidget {
+  const _AnimatedToggle({required this.value, required this.onChanged});
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => onChanged(!value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+        width: 52,
+        height: 28,
+        decoration: BoxDecoration(
+          color: value ? const Color(0xFF111111) : const Color(0xFFE0E0E0),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: AnimatedAlign(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          alignment: value ? Alignment.centerRight : Alignment.centerLeft,
+          child: Container(
+            width: 22,
+            height: 22,
+            margin: const EdgeInsets.symmetric(horizontal: 3),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.15),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _SettingTile extends StatelessWidget {
   const _SettingTile({
     required this.title,
-    required this.subtitle,
+    this.subtitle,
     required this.trailing,
     this.onTap,
   });
 
   final String title;
-  final String subtitle;
+  final String? subtitle;
   final Widget trailing;
   final VoidCallback? onTap;
 
@@ -486,29 +492,43 @@ class _SettingTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(16),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: subtitle != null ? 12 : 14,
+        ),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE8E8E8)),
         ),
         child: Row(
           children: [
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     title,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                      color: Color(0xFF111111),
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle!,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF888888),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

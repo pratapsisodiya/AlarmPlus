@@ -11,7 +11,10 @@
       "Bash(git add *)",
       "Bash(git commit *)",
       "Bash(git push *)",
-      "Bash(xargs grep -l \"tensorflow\\\\|tflite\\\\|model\\\\|inference\\\\|llm\\\\|ai\\\\|ml\\\\|gpt\\\\|claude\\\\|neural\")"
+      "Bash(xargs grep -l \"tensorflow\\\\|tflite\\\\|model\\\\|inference\\\\|llm\\\\|ai\\\\|ml\\\\|gpt\\\\|claude\\\\|neural\")",
+      "Bash(Get-ChildItem -Path \"D:\\\\top projects\\\\AlarmPlus\\\\AlarmPlus\" -Force)",
+      "Bash(Select-Object Name, Mode)",
+      "Bash(xargs grep -l \"create\\\\|new.*alarm\\\\|add.*alarm\")"
     ]
   }
 }

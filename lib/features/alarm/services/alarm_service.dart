@@ -11,10 +11,14 @@ import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:uuid/uuid.dart';
 
+import 'package:shared_preferences/shared_preferences.dart' as sp;
+
 import 'package:alarm_plus/features/alarm/models/alarm_model.dart';
 import 'package:alarm_plus/shared/models/challenge_type.dart';
 import 'package:alarm_plus/core/services/smart_alarm_service.dart';
 import 'package:alarm_plus/core/services/storage_service.dart';
+
+const _nativeRingtoneKeyPrefix = 'alarm.native_ringtone';
 
 class AlarmService {
   static final FlutterLocalNotificationsPlugin _notifications =
@@ -111,10 +115,19 @@ class AlarmService {
       alarm.sound,
     );
 
-    // Native content:// URIs (Android ringtone picker) are passed directly.
-    // Empty string tells the alarm package to use the system default alarm tone.
-    final audioPath =
-        (selectedSound == 'default' || selectedSound.isEmpty) ? '' : selectedSound;
+    // Determine audio path for the alarm package.
+    // content:// URIs can't be loaded as Flutter assets — we store them in prefs
+    // and let AlarmForegroundService play them via RingtoneManager instead.
+    final String audioPath;
+    if (selectedSound.startsWith('content://')) {
+      final prefs = await sp.SharedPreferences.getInstance();
+      await prefs.setString('$_nativeRingtoneKeyPrefix.$alarmId', selectedSound);
+      audioPath = 'assets/sounds/silent.wav';
+    } else if (selectedSound == 'default' || selectedSound.isEmpty) {
+      audioPath = '';
+    } else {
+      audioPath = selectedSound;
+    }
 
     final settings = AlarmSettings(
       id: alarmId,
@@ -230,6 +243,8 @@ class AlarmService {
     await Alarm.stop(alarmId);
     await _notifications.cancel(alarmId);
     await _notifications.cancel(_windDownNotificationId(id));
+    final prefs = await sp.SharedPreferences.getInstance();
+    await prefs.remove('$_nativeRingtoneKeyPrefix.$alarmId');
   }
 
   static Future<void> toggleAlarm(String id, bool on) async {
