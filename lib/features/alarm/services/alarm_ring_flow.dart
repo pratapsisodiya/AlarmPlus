@@ -40,7 +40,7 @@ class AlarmRingFlow {
   static final Map<int, Timer> _wakeUpCheckTimers = <int, Timer>{};
   static final Map<int, Timer> _wakeUpReringTimers = <int, Timer>{};
 
-  static void bindNativeAlarmEvents() {
+  static Future<void> bindNativeAlarmEvents() async {
     // Register wake-check tap handler to avoid circular import
     AlarmService.registerWakeCheckHandler(cancelWakeUpCheck);
 
@@ -54,7 +54,8 @@ class AlarmRingFlow {
       }
     });
 
-    _ringSubscription ??= Alarm.ringing.listen((ringingSet) {
+    await _ringSubscription?.cancel();
+    _ringSubscription = Alarm.ringing.listen((ringingSet) {
       final ids = ringingSet.alarms.map((alarm) => alarm.id).toSet();
       final newIds = ids.difference(_knownRingingIds);
 
@@ -71,7 +72,8 @@ class AlarmRingFlow {
       }
     });
 
-    _ringIntentSubscription ??= AlarmService.ringIntents.listen((alarmId) {
+    await _ringIntentSubscription?.cancel();
+    _ringIntentSubscription = AlarmService.ringIntents.listen((alarmId) {
       if (alarmId <= 0) {
         return;
       }

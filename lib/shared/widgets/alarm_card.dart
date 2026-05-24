@@ -59,16 +59,23 @@ class AlarmCard extends StatelessWidget {
 
   Widget _buildCard(BuildContext context) {
     final color = alarm.isEnabled
-        ? const Color(0xFF0F172A)
+        ? Theme.of(context).textTheme.bodyLarge?.color ?? const Color(0xFF0F172A)
         : const Color(0xFF94A3B8);
+
+    final cardBg = Theme.of(context).brightness == Brightness.dark
+        ? const Color(0xFF1E293B)
+        : Colors.white;
+    final borderColor = Theme.of(context).brightness == Brightness.dark
+        ? const Color(0xFF334155)
+        : const Color(0xFFE2E8F0);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 18),
       padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: borderColor),
         boxShadow: const [
           BoxShadow(
             color: Color(0x0A0F172A),

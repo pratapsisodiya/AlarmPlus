@@ -91,7 +91,7 @@ class AlarmModel {
     while (true) {
       final weekday = candidate.weekday;
       final validDay = repeatDays.contains(weekday);
-      if (validDay && candidate.isAfter(from)) {
+      if (validDay && !candidate.isBefore(from)) {
         return candidate;
       }
       candidate = candidate.add(const Duration(days: 1));

@@ -591,10 +591,10 @@ class SmartAlarmService {
 
   static Future<DismissChallengeType> getDismissChallenge() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_challengeKey) ?? 'none';
+    final raw = prefs.getString(_challengeKey) ?? 'math';
     return DismissChallengeType.values.firstWhere(
       (value) => value.name == raw,
-      orElse: () => DismissChallengeType.none,
+      orElse: () => DismissChallengeType.math,
     );
   }
 

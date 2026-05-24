@@ -67,9 +67,13 @@ class _QuestRunnerWidgetState extends State<QuestRunnerWidget> {
     final total = widget.quest.steps.length;
     final step = widget.quest.steps[_currentStep];
 
+    final cardBg = Theme.of(context).brightness == Brightness.dark
+        ? const Color(0xFF1E293B)
+        : Colors.white;
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(28),
       ),
       child: Column(
@@ -131,7 +135,7 @@ class _QuestRunnerWidgetState extends State<QuestRunnerWidget> {
         return MemoryChallengeWidget(
             onPassed: _onStepPassed, onFailed: _onStepFailed);
       case ChallengeType.shakeToWake:
-        return ShakeChallengeWidget(onPassed: _onStepPassed);
+        return ShakeChallengeWidget(onPassed: _onStepPassed, onFailed: _onStepFailed);
       case ChallengeType.typing:
         return TypingChallengeWidget(
             onPassed: _onStepPassed, onFailed: _onStepFailed);
@@ -141,6 +145,7 @@ class _QuestRunnerWidgetState extends State<QuestRunnerWidget> {
           child: BarcodeChallengeWidget(
             lockedQrCode: widget.lockedQrCode,
             onPassed: _onStepPassed,
+            onFailed: _onStepFailed,
           ),
         );
       case ChallengeType.trivia:

@@ -35,7 +35,12 @@ class AlarmService {
     _onWakeCheckTapped = handler;
   }
 
-  static bool get _supportsNativeAlarmOps => !kIsWeb;
+  static bool get _isMobilePlatform =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS);
+
+  static bool get _supportsNativeAlarmOps => _isMobilePlatform;
 
   static Future<void> init() async {
     tz_data.initializeTimeZones();
@@ -90,14 +95,12 @@ class AlarmService {
   }
 
   static Future<void> requestPermissions() async {
-    if (kIsWeb) {
-      return;
-    }
+    if (!_isMobilePlatform) return;
 
     try {
       await Permission.notification.request();
 
-      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      if (defaultTargetPlatform == TargetPlatform.android) {
         await Permission.scheduleExactAlarm.request();
         await Permission.ignoreBatteryOptimizations.request();
       }
@@ -170,9 +173,9 @@ class AlarmService {
 
     final location = tz.local;
     final zoned = tz.TZDateTime.from(targetTime, location);
-    final exactPermission = await Permission.scheduleExactAlarm.status;
-    final scheduleMode = (!kIsWeb && defaultTargetPlatform == TargetPlatform.android)
-        ? (exactPermission.isGranted
+    final bool isAndroid = !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+    final scheduleMode = isAndroid
+        ? ((await Permission.scheduleExactAlarm.status).isGranted
               ? AndroidScheduleMode.exactAllowWhileIdle
               : AndroidScheduleMode.inexactAllowWhileIdle)
         : AndroidScheduleMode.exactAllowWhileIdle;

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
@@ -5,10 +7,12 @@ class BarcodeChallengeWidget extends StatefulWidget {
   const BarcodeChallengeWidget({
     super.key,
     required this.onPassed,
+    this.onFailed,
     this.lockedQrCode,
   });
 
   final VoidCallback onPassed;
+  final VoidCallback? onFailed;
   /// When set, only the matching QR/barcode value dismisses the alarm (scan-a-spot mode).
   final String? lockedQrCode;
 
@@ -19,6 +23,8 @@ class BarcodeChallengeWidget extends StatefulWidget {
 class _BarcodeChallengeWidgetState extends State<BarcodeChallengeWidget> {
   bool _scanned = false;
   bool _wrongScan = false;
+  int _wrongCount = 0;
+  static const _maxWrongScans = 5;
 
   void _onDetect(BarcodeCapture capture) {
     if (_scanned) return;
@@ -32,10 +38,17 @@ class _BarcodeChallengeWidgetState extends State<BarcodeChallengeWidget> {
       _scanned = true;
       widget.onPassed();
     } else {
+      _wrongCount++;
       setState(() => _wrongScan = true);
       Future.delayed(const Duration(seconds: 2), () {
         if (mounted) setState(() => _wrongScan = false);
       });
+      // After too many wrong scans, give up (only meaningful in locked-spot mode)
+      if (widget.lockedQrCode != null && _wrongCount >= _maxWrongScans) {
+        Timer(const Duration(seconds: 2), () {
+          if (mounted) widget.onFailed?.call();
+        });
+      }
     }
   }
 
@@ -58,11 +71,13 @@ class _BarcodeChallengeWidgetState extends State<BarcodeChallengeWidget> {
                   color: Colors.red.withValues(alpha: 0.35),
                   borderRadius: BorderRadius.circular(24),
                 ),
-                child: const Center(
+                child: Center(
                   child: Text(
-                    'Wrong code!\nWalk to your spot.',
+                    widget.lockedQrCode != null
+                        ? 'Wrong code!\n${_maxWrongScans - _wrongCount} tries left'
+                        : 'Wrong code!\nWalk to your spot.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w900,
                       fontSize: 18,

@@ -27,7 +27,6 @@ import 'package:alarm_plus/features/alarm/widgets/math_challenge_widget.dart';
 import 'package:alarm_plus/features/alarm/widgets/quest_runner_widget.dart';
 import 'package:alarm_plus/shared/widgets/sunrise_gradient.dart';
 import 'package:alarm_plus/features/sleep/screens/wake_routine_screen.dart';
-import 'package:alarm_plus/core/services/guardian_service.dart';
 
 class AlarmRingScreen extends StatefulWidget {
   const AlarmRingScreen({super.key});
@@ -49,10 +48,10 @@ class _AlarmRingScreenState extends State<AlarmRingScreen>
   int _wrongAnswers = 0;
   int _quickSolveXp = 0;
   final int _dismissStartMs = DateTime.now().millisecondsSinceEpoch;
-  Timer? _guardianTimer;
 
   // Gentle wake volume ramp
   int _gentleSecondsLeft = 0;
+  bool _gentleWakeActive = false;
 
   int get _alarmId {
     final args = ModalRoute.of(context)?.settings.arguments;
@@ -96,14 +95,15 @@ class _AlarmRingScreenState extends State<AlarmRingScreen>
           _startGentleWake(alarm);
         }
       }
-      _guardianTimer = Timer(const Duration(minutes: 10), () {
-        GuardianService.triggerAlert(alarmId);
-      });
+      // Guardian timer is owned by AlarmRingFlow — no duplicate needed here.
     }
   }
 
   void _startGentleWake(AlarmModel alarm) {
-    setState(() => _gentleSecondsLeft = alarm.gentleWakeDurationSeconds);
+    setState(() {
+      _gentleSecondsLeft = alarm.gentleWakeDurationSeconds;
+      _gentleWakeActive = true;
+    });
     VolumeController.instance.setVolume(0.1);
 
     final duration = alarm.gentleWakeDurationSeconds;
@@ -112,18 +112,25 @@ class _AlarmRingScreenState extends State<AlarmRingScreen>
     var elapsed = 0;
     Future.doWhile(() async {
       await Future<void>.delayed(const Duration(seconds: 1));
-      if (!mounted) return false;
+      if (!mounted || !_gentleWakeActive) return false;
       elapsed++;
       final vol = 0.1 + (elapsed / stepCount) * 0.9;
       VolumeController.instance.setVolume(vol.clamp(0.1, 1.0));
-      setState(() => _gentleSecondsLeft = duration - elapsed);
-      return elapsed < stepCount;
+      if (mounted) setState(() => _gentleSecondsLeft = duration - elapsed);
+      return elapsed < stepCount && _gentleWakeActive;
     });
+  }
+
+  void _stopGentleWake() {
+    if (_gentleWakeActive) {
+      _gentleWakeActive = false;
+      VolumeController.instance.setVolume(1.0);
+    }
   }
 
   @override
   void dispose() {
-    _guardianTimer?.cancel();
+    _gentleWakeActive = false;
     _pulseController.dispose();
     _ringController.dispose();
     super.dispose();
@@ -133,7 +140,12 @@ class _AlarmRingScreenState extends State<AlarmRingScreen>
     if (_isDismissing) return;
     final alarm = AlarmService.findByIntId(alarmId);
 
-    if (_mathChallengeEnabled) {
+    // Always require a challenge: use alarm's configured type, fall back to math
+    final alarmHasChallenge = alarm != null &&
+        (alarm.questMode || alarm.challengeType != null);
+    final shouldChallenge = alarmHasChallenge || _mathChallengeEnabled;
+
+    if (shouldChallenge) {
       bool passed;
 
       if (alarm != null && alarm.questMode) {
@@ -162,7 +174,7 @@ class _AlarmRingScreenState extends State<AlarmRingScreen>
       }
     }
 
-    _guardianTimer?.cancel();
+    _stopGentleWake();
     setState(() => _isDismissing = true);
     final reward = await AlarmRingFlow.stopAlarm(alarmId);
     if (!mounted) return;
@@ -182,9 +194,12 @@ class _AlarmRingScreenState extends State<AlarmRingScreen>
     final prevBest = await SmartAlarmService.saveWakeScore(wakeScore);
 
     // Record sleep analytics event
+    final scheduledToday = alarm != null
+        ? DateTime(now.year, now.month, now.day, alarm.time.hour, alarm.time.minute)
+        : now;
     await SleepAnalyticsService.recordEvent(AlarmRingEvent(
       alarmId: alarm?.id ?? '',
-      scheduledTime: now,
+      scheduledTime: scheduledToday,
       actualDismissTime: now,
       snoozeCount: _snoozeCount,
       wasMissed: false,
